@@ -17,7 +17,10 @@ library
   hs-source-dirs:      src
   exposed-modules:     Tasks
                      , Util
+                     , Parser
   build-depends:       base >= 4.7 && < 5
+                     , parsec
+                     , text
   default-language:    Haskell2010
 
 executable todo-exe
@@ -35,6 +38,8 @@ test-suite todo-test
   build-depends:       base
                      , hspec
                      , todo
+                     , parsec
+                     , text
   ghc-options:         -Wall
   default-language:    Haskell2010
 
