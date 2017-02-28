@@ -33,6 +33,7 @@ test-suite todo-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
+                     , hspec
                      , todo
   ghc-options:         -Wall
   default-language:    Haskell2010

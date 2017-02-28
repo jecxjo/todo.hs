@@ -28,8 +28,11 @@ data Date = Date Integer Int Int
 -- |Show Date in YYYY-MM-DD format
 instance Show Date where
   show (Date year month day) = show year
-                               ++ "-" ++ show month
-                               ++ "-" ++ show day
+                               ++ "-" ++ showDoubleDigit month
+                               ++ "-" ++ showDoubleDigit day
+    where showDoubleDigit num = if num < 10
+                                then "0" ++ show num
+                                else show num
 
 -- |Check if two Dates are equal
 instance Eq Date where
@@ -79,7 +82,8 @@ instance Ord Task where
   compare (Incomplete _ _ _ _ _) (Completed _ _) = LT
   compare (Completed _ _) (Incomplete _ _ _ _ _) = GT
   -- The following are backwards on purpose, to get A > B
-  compare (Incomplete (Just a) _ _ _ _) (Incomplete (Just b) _ _ _ _) = compare b a
+  compare (Incomplete (Just a) _ _ _ _) (Incomplete (Just b) _ _ _ _) =
+    compare b a
   compare (Completed _ t1) (Completed _ t2) = compare t2 t1
 
 -- |Filters out all completed tasks and returns a list of incomplete
