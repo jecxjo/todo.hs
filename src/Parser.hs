@@ -12,6 +12,9 @@ module Parser
     , incompleteTask
     , completedTask
     , task
+    , Parser.ParseError
+    , parseLines
+    , validateLine
     ) where
 
 import Control.Applicative (many)
@@ -26,6 +29,8 @@ import Text.Parsec.Prim (parse, try, (<|>), parseTest)
 import Text.Parsec.Text
 
 import qualified Tasks as Tasks
+
+type ParseError = E.ParseError
 
 --
 -- Atoms
@@ -179,3 +184,13 @@ task = do
   try (many (char '\n'))
   t <- choice [ completedTask, incompleteTask ]
   return t
+
+-- |Parses entire lines. This call includes the string for the file path which
+-- is used in the error message.
+parseLines :: String -> String -> Either Parser.ParseError [Tasks.Task]
+parseLines path lines = parse (many task) path (pack lines)
+
+-- |Validates a single line. This is used to check if the string passed for
+-- creating a new task is valid.
+validateLine :: String -> Either Parser.ParseError Tasks.Task
+validateLine content = parse task "" (pack content)

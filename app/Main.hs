@@ -1,5 +1,10 @@
 module Main where
 
+import System.Environment (getArgs)
+
+import Commands (processArgs)
+
 main :: IO ()
 main = do
-  putStrLn "todo.hs"
+  args <- getArgs
+  processArgs args
