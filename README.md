@@ -69,7 +69,6 @@ just deletes the entry.
 
 - Sort by Due Dates (due:2017-07-29)
 - Smart Due Dates (due:tomorrow, due:today+3, due:friday)
-- Configuratable location of todo.txt
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
 [2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types

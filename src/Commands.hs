@@ -1,5 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Commands ( processArgs ) where
+module Commands
+    (
+      processArgs
+    , process
+    ) where
 
 import Control.Monad (forM_)
 import Data.List (sort, isPrefixOf)
@@ -33,17 +37,6 @@ todoFilePath = do
   home <- getHomeDirectory
   return $ joinPath [ home, "todo.txt" ]
 
--- |Reads the file, print error or calls a function to handle the list of todo
--- items.
-processArgs' :: ([Task] -> IO ()) -> IO ()
-processArgs' f = do
-  path <- todoFilePath
-  todo <- readTodoTxt path
-  case todo of
-    Left e -> error (show e)
-    Right xs -> do
-      f xs
-
 -- |Filter tasks based on Projects.
 -- Expects to be in a numbered tuple.
 filterTupleProjects :: [Project] -> [(Int, Task)] -> [(Int, Task)]
@@ -62,21 +55,40 @@ filterTupleContexts cx = filter contextFilter
     contextFilter (_, (Completed _ (Incomplete _ _ _ ctx _))) =
       cx `subsetOf` ctx
 
+-- |Pass in command line arguments to be processed
+processArgs :: [String] -> IO ()
+processArgs args = do
+  path <- todoFilePath
+  process path args
+
+-- |Reads the file, print error or calls a function to handle the list of todo
+-- items.
+process' :: FilePath -> ([Task] -> IO ()) -> IO ()
+process' path f = do
+  todo <- readTodoTxt path
+  case todo of
+    Left e -> error (show e)
+    Right xs -> do
+      f xs
+
 -- |Process command line arguments.
 -- This function has multiple instances for performing the different actions.
-processArgs :: [String] -> IO ()
+process :: FilePath -> [String] -> IO ()
 
 -- |Default Command, list all entries
 -- Command Line:
-processArgs [] = processArgs' listAll
+process path [] = process' path listAll
   where listAll = (\xss -> forM_ xss printTuple) . numberify
                                                  . reverse
                                                  . sort
                                                  . onlyPending
 
+-- |Flag for passing in the location of the todo.txt file
+process _ ("-t":path:rest) = process path rest
+
 -- |List entries with project and context filter
 -- Command Line: list +Project @Context
-processArgs ("list":filters) = processArgs' listSome
+process path ("list":filters) = process' path listSome
   where
     projects = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "+" f) filters
     contexts = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "@" f) filters
@@ -91,25 +103,23 @@ processArgs ("list":filters) = processArgs' listSome
 
 -- |Add task to list
 -- Command Line: add Example Task for +Project with @Context
-processArgs ("add":rest) = processArgs' addToList
+process path ("add":rest) = process' path addToList
   where
     addToList oldLines = case validateLine (unwords rest) of
                             Left e -> error $ show e
                             Right newLine -> do
-                              path <- todoFilePath
                               writeTodoTxt path (newLine:oldLines)
                               putStrLn $ "New Task: " ++ show newLine
 
 -- |Delete task
 -- Command Line: delete 1
-processArgs ("delete":idx:[]) = processArgs' deleteIdx
+process path ("delete":idx:[]) = process' path deleteIdx
   where
     deleteIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ reverse $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
-        path <- todoFilePath
         writeTodoTxt path  $ denumbrify $ filter (\(n, _) -> n /= nIdx) xss
         putStrLn "Task Deleted"
       else do
@@ -117,14 +127,13 @@ processArgs ("delete":idx:[]) = processArgs' deleteIdx
 
 -- |Mark Task Complete
 -- Command Line: complete 1
-processArgs ("complete":idx:[]) = processArgs' completeIdx
+process path ("complete":idx:[]) = process' path completeIdx
   where
     completeIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ reverse $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
-        path <- todoFilePath
         c <- getCurrentTime
         let (y, m, d) = toGregorian $ utctDay c
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
@@ -137,7 +146,7 @@ processArgs ("complete":idx:[]) = processArgs' completeIdx
 
 -- |List only completed tasks
 -- Command Line: completed
-processArgs ("completed":[]) = processArgs' completed
+process path ("completed":[]) = process' path completed
   where
     completed = (\xss -> forM_ xss printTuple) . numberify
                                                . reverse
@@ -146,14 +155,13 @@ processArgs ("completed":[]) = processArgs' completed
 
 -- |Append to a currently existing task
 -- Command Line: append 1 Text to add to task 1
-processArgs ("append":idx:rest) = processArgs' appendIdx
+process path ("append":idx:rest) = process' path appendIdx
   where
     appendIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ reverse $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
-        path <- todoFilePath
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
         let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
         case matches of
@@ -169,8 +177,8 @@ processArgs ("append":idx:rest) = processArgs' appendIdx
 
 -- |Help output
 -- Command Line: help
-processArgs ("help":_) = do
-  putStrLn "Usage: todo action [task_number] [task_description]"
+process _ ("help":_) = do
+  putStrLn "Usage: todo [-t path] action [task_number] [task_description]"
   putStrLn ""
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
@@ -184,12 +192,12 @@ processArgs ("help":_) = do
 
 -- |Show Version
 -- Command Lin: version
-processArgs ("version":_) = do
+process _ ("version":_) = do
   putStrLn $ "Version: " ++ version
 
 -- Aliases
-processArgs ("remove":idx:[]) = processArgs("delete":idx:[])
-processArgs ("del":idx:[]) = processArgs("delete":idx:[])
-processArgs ("done":idx:[]) = processArgs("complete":idx:[])
-processArgs ("ls":rest) = processArgs("list":rest)
-processArgs _ = processArgs ("help":[])
+process path ("remove":idx:[]) = process path ("delete":idx:[])
+process path ("del":idx:[]) = process path ("delete":idx:[])
+process path ("done":idx:[]) = process path ("complete":idx:[])
+process path ("ls":rest) = process path ("list":rest)
+process path _ = process path ("help":[])

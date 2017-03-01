@@ -46,6 +46,9 @@ test-suite todo-test
                      , todo
                      , parsec
                      , text
+                     , directory
+                     , filepath
+                     , regex-posix
   ghc-options:         -Wall
   default-language:    Haskell2010
 
