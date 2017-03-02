@@ -3,10 +3,12 @@ module Commands
     (
       processArgs
     , process
+    , ConfigOption(..)
     ) where
 
 import Control.Monad (forM_)
 import Data.List (sort, isPrefixOf)
+import Data.Maybe (isJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath)
@@ -17,6 +19,11 @@ import Tasks (Task(..), Date(..), Project, Context, onlyPending, onlyCompleted,
               filterProjects, filterContext)
 import Util (subsetOf)
 import Version (version)
+
+data ConfigOption = ConfigOption {
+                                   todoTxtPath :: FilePath
+                                 , timeStamp :: Maybe Date
+                                 }
 
 -- |Turn an array into a numbered array
 numberify :: [a] -> [(Int, a)]
@@ -59,12 +66,12 @@ filterTupleContexts cx = filter contextFilter
 processArgs :: [String] -> IO ()
 processArgs args = do
   path <- todoFilePath
-  process path args
+  process (ConfigOption path Nothing) args
 
 -- |Reads the file, print error or calls a function to handle the list of todo
 -- items.
 process' :: FilePath -> ([Task] -> IO ()) -> IO ()
-process' path f = do
+process' path  f = do
   todo <- readTodoTxt path
   case todo of
     Left e -> error (show e)
@@ -73,22 +80,28 @@ process' path f = do
 
 -- |Process command line arguments.
 -- This function has multiple instances for performing the different actions.
-process :: FilePath -> [String] -> IO ()
+process :: ConfigOption -> [String] -> IO ()
 
 -- |Default Command, list all entries
 -- Command Line:
-process path [] = process' path listAll
+process cfg [] = process' (todoTxtPath cfg) listAll
   where listAll = (\xss -> forM_ xss printTuple) . numberify
                                                  . reverse
                                                  . sort
                                                  . onlyPending
 
 -- |Flag for passing in the location of the todo.txt file
-process _ ("-t":path:rest) = process path rest
+process cfg ("-t":path:rest) = process (cfg { todoTxtPath = path }) rest
+
+-- |Flag to auto start date all tasks
+process cfg ("-s":rest) = do
+  c <- getCurrentTime
+  let (y, m, d) = toGregorian $ utctDay c
+  process (cfg { timeStamp = Just (Date y m d) }) rest
 
 -- |List entries with project and context filter
 -- Command Line: list +Project @Context
-process path ("list":filters) = process' path listSome
+process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
   where
     projects = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "+" f) filters
     contexts = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "@" f) filters
@@ -103,31 +116,39 @@ process path ("list":filters) = process' path listSome
 
 -- |Add task to list
 -- Command Line: add Example Task for +Project with @Context
-process path ("add":rest) = process' path addToList
+process cfg ("add":rest) = process' (todoTxtPath cfg) addToList
   where
     addToList oldLines = case validateLine (unwords rest) of
                             Left e -> error $ show e
                             Right newLine -> do
-                              writeTodoTxt path (newLine:oldLines)
-                              putStrLn $ "New Task: " ++ show newLine
+                              if isJust (timeStamp cfg)
+                              then do
+                                let Incomplete pri _ pro con str = newLine
+                                let newTask = Incomplete pri (timeStamp cfg) pro con str
+                                writeTodoTxt (todoTxtPath cfg) (newTask:oldLines)
+                                putStrLn $ "New Task: " ++ show newTask
+                              else do
+                                writeTodoTxt (todoTxtPath cfg) (newLine:oldLines)
+                                putStrLn $ "New Task: " ++ show newLine
 
 -- |Delete task
 -- Command Line: delete 1
-process path ("delete":idx:[]) = process' path deleteIdx
+process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
   where
     deleteIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ reverse $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
-        writeTodoTxt path  $ denumbrify $ filter (\(n, _) -> n /= nIdx) xss
+        writeTodoTxt (todoTxtPath cfg)
+                     $ denumbrify $ filter (\(n, _) -> n /= nIdx) xss
         putStrLn "Task Deleted"
       else do
         error "Invalid Index"
 
 -- |Mark Task Complete
 -- Command Line: complete 1
-process path ("complete":idx:[]) = process' path completeIdx
+process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
   where
     completeIdx xs = do
       let nIdx = read idx :: Int
@@ -139,14 +160,14 @@ process path ("complete":idx:[]) = process' path completeIdx
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
         let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
         let completed = map (\t -> Completed (Date y m d) t) matches
-        writeTodoTxt path (nonMatch ++ completed)
+        writeTodoTxt (todoTxtPath cfg) (nonMatch ++ completed)
         putStrLn "Task Completed"
       else do
         error "Invalid Index"
 
 -- |List only completed tasks
 -- Command Line: completed
-process path ("completed":[]) = process' path completed
+process cfg ("completed":[]) = process' (todoTxtPath cfg) completed
   where
     completed = (\xss -> forM_ xss printTuple) . numberify
                                                . reverse
@@ -155,7 +176,7 @@ process path ("completed":[]) = process' path completed
 
 -- |Append to a currently existing task
 -- Command Line: append 1 Text to add to task 1
-process path ("append":idx:rest) = process' path appendIdx
+process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
   where
     appendIdx xs = do
       let nIdx = read idx :: Int
@@ -169,7 +190,7 @@ process path ("append":idx:rest) = process' path appendIdx
             case validateLine (show m ++ " " ++ unwords rest) of
               Left e -> error $ show e
               Right updated -> do
-                writeTodoTxt path (updated:nonMatch)
+                writeTodoTxt (todoTxtPath cfg) (updated:nonMatch)
                 putStrLn $ "Updated Task: " ++ show updated
           _ -> do error "Error in append"
       else do
@@ -178,7 +199,10 @@ process path ("append":idx:rest) = process' path appendIdx
 -- |Help output
 -- Command Line: help
 process _ ("help":_) = do
-  putStrLn "Usage: todo [-t path] action [task_number] [task_description]"
+  putStrLn "Usage: todo [-t path] [-s] action [task_number] [task_description]"
+  putStrLn "Flags:"
+  putStrLn " -t path    Points to todo.txt, default is $HOME/todo.txt"
+  putStrLn " -s         Auto timestamp new tasks"
   putStrLn ""
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
@@ -196,8 +220,8 @@ process _ ("version":_) = do
   putStrLn $ "Version: " ++ version
 
 -- Aliases
-process path ("remove":idx:[]) = process path ("delete":idx:[])
-process path ("del":idx:[]) = process path ("delete":idx:[])
-process path ("done":idx:[]) = process path ("complete":idx:[])
-process path ("ls":rest) = process path ("list":rest)
-process path _ = process path ("help":[])
+process cfg ("remove":idx:[]) = process cfg ("delete":idx:[])
+process cfg ("del":idx:[]) = process cfg ("delete":idx:[])
+process cfg ("done":idx:[]) = process cfg ("complete":idx:[])
+process cfg ("ls":rest) = process cfg ("list":rest)
+process cfg _ = process cfg ("help":[])

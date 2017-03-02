@@ -1,6 +1,7 @@
 module CommandsSpec where
 
-import Commands (process)
+import Commands (process, ConfigOption(..))
+import Tasks (Date(..))
 import Util (removeIfExists)
 
 import Control.Exception (ErrorCall(..))
@@ -31,84 +32,89 @@ getTodoFile path = do
 spec :: Spec
 spec =
   describe "Processing command line arguments" $ do
-    let path = joinPath [".", "todo-testing.txt"]
+    let cfg = ConfigOption { todoTxtPath = joinPath [".", "todo-testing.txt"]
+                           , timeStamp = Nothing }
 
     describe "Add action" $ do
-      before_ (removeIfExists path) $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
         it "creates a new empty todo.txt" $ do
-          process path []
-          doesFileExist path >>= shouldBe True
+          process cfg []
+          doesFileExist (todoTxtPath cfg) >>= shouldBe True
 
         it "adds new entry with no priority or date" $ do
-          process path (words "add An example task")
-          getTodoFile path >>= (`shouldBe` "An example task")
+          process cfg (words "add An example task")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "An example task")
 
         it "adds a new entry with priority, date, context and project" $ do
-          process path (words "add (A) 2017-03-01 An example task for +ProjectName with @Context")
-          getTodoFile path >>= (`shouldBe` "(A) 2017-03-01 An example task for +ProjectName with @Context")
+          process cfg (words "add (A) 2017-03-01 An example task for +ProjectName with @Context")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(A) 2017-03-01 An example task for +ProjectName with @Context")
+
+        it "adds a new entry with auto timestamping" $ do
+          process cfg (words "-s add (A) An example with auto timestamp")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("\\(A\\) [0-9]{4}-[0-9]{2}-[0-9]{2} An example with auto timestamp")))
 
     describe "Append action" $ do
-      before_ (removeIfExists path) $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
         it "appends to single entry" $ do
-          process path (words "add An example")
-          process path (words "append 1 task")
-          getTodoFile path >>= (`shouldBe` "An example task")
+          process cfg (words "add An example")
+          process cfg (words "append 1 task")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "An example task")
 
         it "appends a middle entry" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "add Task 3")
-          process path (words "append 2 in +Project")
-          getTodoFile path >>= (`shouldSatisfy` (\x -> x =~ ("Task 2 in \\+Project\\\n" ++
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "append 2 in +Project")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("Task 2 in \\+Project\\\n" ++
                                                              "Task 1\\\n" ++
                                                              "Task 3") :: Bool))
 
         it "does not append an invalid index" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index")
 
     describe "Complete action" $ do
-      before_ (removeIfExists path) $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
         it "completes a new entry with no priority or date" $ do
-          process path (words "add An example task")
-          process path (words "complete 1")
-          getTodoFile path >>= (`shouldSatisfy` (\x -> x =~ "^x [0-9]{4}-[0-9]{2}-[0-9]{2} An example task$" :: Bool))
+          process cfg (words "add An example task")
+          process cfg (words "complete 1")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ "^x [0-9]{4}-[0-9]{2}-[0-9]{2} An example task$" :: Bool))
 
         it "completes a new entry with priority and date" $ do
-          process path (words "add (A) 2017-03-01 An example task for +ProjectName with @Context")
-          process path (words "complete 1")
-          getTodoFile path >>= (`shouldSatisfy` (\x -> x =~ "^x [0-9]{4}-[0-9]{2}-[0-9]{2} \\(A\\) 2017-03-01 An example task for \\+ProjectName with \\@Context$" :: Bool))
+          process cfg (words "add (A) 2017-03-01 An example task for +ProjectName with @Context")
+          process cfg (words "complete 1")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ "^x [0-9]{4}-[0-9]{2}-[0-9]{2} \\(A\\) 2017-03-01 An example task for \\+ProjectName with \\@Context$" :: Bool))
 
         it "completes 2nd of three tasks" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "add Task 3")
-          process path (words "complete 2")
-          getTodoFile path >>= (`shouldSatisfy` (\x -> x =~ ("Task 1\\\n" ++
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "complete 2")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("Task 1\\\n" ++
                                                              "Task 3\\\n" ++
                                                              "x [0-9]{4}-[0-9]{2}-[0-9]{2} Task 2") :: Bool))
 
         it "does not complete an invalid index" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "complete 3") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "complete 3") `shouldThrow` (== ErrorCall "Invalid Index")
 
     describe "Delete action" $ do
-      before_ (removeIfExists path) $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
         it "deletes a single entry" $ do
-          process path (words "add Task 1")
-          process path (words "delete 1")
-          getTodoFile path >>= (`shouldBe` "")
+          process cfg (words "add Task 1")
+          process cfg (words "delete 1")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "")
 
         it "deletes a middle entry" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "add Task 3")
-          process path (words "delete 2")
-          getTodoFile path >>= (`shouldBe` "Task 1\nTask 3")
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "delete 2")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1\nTask 3")
 
         it "does not delete an invalid index" $ do
-          process path (words "add Task 1")
-          process path (words "add Task 2")
-          process path (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index")
