@@ -7,6 +7,7 @@ module Commands
     ) where
 
 import Control.Monad (forM_)
+import Data.Char (toUpper)
 import Data.List (sort, isPrefixOf)
 import Data.Maybe (isJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
@@ -15,8 +16,15 @@ import System.FilePath (joinPath)
 
 import FileHandler (readTodoTxt, writeTodoTxt)
 import Parser (validateLine)
-import Tasks (Task(..), Date(..), Project, Context, onlyPending, onlyCompleted,
-              filterProjects, filterContext)
+import Tasks ( Task(..)
+             , Date(..)
+             , Priority
+             , Project
+             , Context
+             , onlyPending
+             , onlyCompleted
+             , filterProjects
+             , filterContext)
 import Util (subsetOf)
 import Version (version)
 
@@ -196,6 +204,26 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
       else do
         error "Invalid Index"
 
+-- |Modifies the priority of a previously existing task
+-- Command Line: priorty 1 B
+process cfg ("priority":idx:priority:[]) = process' (todoTxtPath cfg) go
+  where
+    isPriority char = (char >= 'A' && char <= 'Z')
+    go xs = do
+      let nIdx = read idx :: Int
+      let nPri = toUpper $ head priority
+      if isPriority nPri
+      then do
+        updatePriority (todoTxtPath cfg) nIdx (Just nPri) xs
+      else do
+        error "Invalid Priority"
+
+process cfg ("priority":idx:[]) = process' (todoTxtPath cfg) go
+  where
+    go xs = do
+      let nIdx = read idx :: Int
+      updatePriority (todoTxtPath cfg) nIdx Nothing xs
+
 -- |Help output
 -- Command Line: help
 process _ ("help":_) = do
@@ -210,6 +238,7 @@ process _ ("help":_) = do
   putStrLn " del|delete|remove TASKNUM"
   putStrLn " complete|done TASKNUM"
   putStrLn " completed"
+  putStrLn " priority|pri TASKNUM NEWPRIORITY"
   putStrLn " version"
   putStrLn " append TASKNUM \"addition to task\""
   putStrLn " help"
@@ -224,4 +253,20 @@ process cfg ("remove":idx:[]) = process cfg ("delete":idx:[])
 process cfg ("del":idx:[]) = process cfg ("delete":idx:[])
 process cfg ("done":idx:[]) = process cfg ("complete":idx:[])
 process cfg ("ls":rest) = process cfg ("list":rest)
+process cfg ("pri":rest) = process cfg ("priority":rest)
 process cfg _ = process cfg ("help":[])
+
+updatePriority :: FilePath -> Int -> Maybe Priority -> [Tasks.Task] -> IO ()
+updatePriority path nIdx mPri xs = do
+  let xss = numberify $ reverse $ sort $ onlyPending xs
+  if (length xs >= nIdx) && (nIdx > 0)
+  then do
+    let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
+    let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+    let updated = map (\(Incomplete _ d pro con str) ->
+                          Incomplete mPri d pro con str) matches
+    writeTodoTxt path (updated ++ nonMatch)
+    putStrLn "Updated Priority"
+  else do
+    error "Invalid Index"
+

@@ -118,3 +118,33 @@ spec =
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
           process cfg (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index")
+
+    describe "Priority action" $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
+        it "adds a priority to unprioritized task" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "priority 1 A")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(A) Task 1")
+
+        it "modifies a priority to a prioritized task" $ do
+          process cfg (words "add (A) Task 1")
+          process cfg (words "priority 1 B")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(B) Task 1")
+
+        it "removes a priority to a prioritized task" $ do
+          process cfg (words "add (A) Task 1")
+          process cfg (words "priority 1")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1")
+
+        it "fails on invalid index" $ do
+          process cfg (words "add (A) Task 1")
+          process cfg (words "priority 2 B") `shouldThrow` (== ErrorCall "Invalid Index")
+
+        it "fails on invalid priority" $ do
+          process cfg (words "add (A) Task 1")
+          process cfg (words "priority 1 5") `shouldThrow` (== ErrorCall "Invalid Priority")
+
+        it "allows lower case priority" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "priority 1 a")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(A) Task 1")
