@@ -5,9 +5,9 @@ module Parser
     , date
     , project
     , context
+    , keyvalue
     , other
     , stringTypes
-    , StringTypes(..)
     , lots
     , incompleteTask
     , completedTask
@@ -20,10 +20,22 @@ module Parser
 import Control.Applicative (many)
 import Data.Char (toUpper)
 import Data.Text (pack)
-import Text.Parsec.Char (char, oneOf, letter, alphaNum, digit, anyChar, noneOf,
-                         endOfLine)
-import Text.Parsec.Combinator (many1, optionMaybe, choice, option, eof,
-                               optional, sepBy)
+import Text.Parsec.Char ( char
+                        , oneOf
+                        , letter
+                        , alphaNum
+                        , digit
+                        , anyChar
+                        , noneOf
+                        , endOfLine
+                        , string)
+import Text.Parsec.Combinator ( many1
+                              , optionMaybe
+                              , choice
+                              , option
+                              , eof
+                              , optional
+                              , sepBy)
 import Text.Parsec.Error as E
 import Text.Parsec.Prim (parse, try, (<|>), parseTest)
 import Text.Parsec.Text
@@ -72,70 +84,62 @@ date = do
                         then x + 2000
                         else x
 
--- |Work around to allow for parsing string with different types of data
-data StringTypes = EProject Tasks.Project
-                 | EContext Tasks.Context
-                 | EOther String
-                 deriving Eq
-
--- |Show StringTypes with correct type notifiers (+ and @)
-instance Show StringTypes where
-  show (EProject p) = "+" ++ p
-  show (EContext c) = "@" ++ c
-  show (EOther s) = s
-
--- |Test if EProject
-isEProject :: StringTypes -> Bool
-isEProject (EProject _) = True
-isEProject _ = False
-
--- |Test if EContext
-isEContext :: StringTypes -> Bool
-isEContext (EContext _) = True
-isEContext _ = False
-
--- |Test if EOther
-isEOther :: StringTypes -> Bool
-isEOther (EOther _) = True
-isEOther _ = False
-
 -- |Project: +ProjectName
-project :: Parser StringTypes
+project :: Parser Tasks.StringTypes
 project = do
   char '+'
   s <- many1 alphaNum
   whiteSpace
-  return $ EProject s
+  return $ Tasks.SProject s
 
 -- |Context: @ContextString
-context :: Parser StringTypes
+context :: Parser Tasks.StringTypes
 context = do
   char '@'
   s <- many1 alphaNum
   whiteSpace
-  return $ EContext s
+  return $ Tasks.SContext s
+
+-- |Key Value Pair: key:value
+kvstring :: Parser Tasks.StringTypes
+kvstring = try $ do
+  key <- many1 alphaNum
+  char ':'
+  value <- many1 alphaNum
+  whiteSpace
+  return $ Tasks.SKeyValue $ Tasks.KVString key value
+
+kvduedate :: Parser Tasks.StringTypes
+kvduedate = try $ do
+  string "due:"
+  d <- date
+  return $ Tasks.SKeyValue $ Tasks.KVDueDate d
+
+keyvalue :: Parser Tasks.StringTypes
+keyvalue = choice [ kvduedate, kvstring ]
 
 -- |Other string content
 -- This parser removes any spacess and newlines from beginning.
-other :: Parser StringTypes
+other :: Parser Tasks.StringTypes
 other = do
   cx <- many1 $ noneOf "\n "
   whiteSpace
-  return $ EOther cx
+  return $ Tasks.SOther cx
 
 -- |Parse all string types
 -- Order is important here. Since Project and Context start with a special
 -- character which can be found inside any other string, they must be the
 -- first choices and other as the fall back.
-stringTypes :: Parser StringTypes
+stringTypes :: Parser Tasks.StringTypes
 stringTypes = choice [
                        project
                      , context
+                     , keyvalue
                      , other
                      ]
 
 -- |Parse a lot of string types
-lots :: Parser [StringTypes]
+lots :: Parser [Tasks.StringTypes]
 lots = do
   l <- many1 stringTypes
   return l
@@ -154,11 +158,7 @@ incompleteTask = do
   whiteSpace
   rest <- lots
   many endOfLine
-  return $ Tasks.Incomplete pri
-                            startDate
-                            (map (\(EProject x) -> x) $ filter isEProject rest)
-                            (map (\(EContext x) -> x) $ filter isEContext rest)
-                            (unwords $ map show rest)
+  return $ Tasks.Incomplete pri startDate rest
 
 -- |Complete Task
 -- It is assumed that a completed task starts with x and a required completion

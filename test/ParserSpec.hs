@@ -33,56 +33,67 @@ spec =
 
     describe "Project" $ do
       it "Matches +ProjectName" $ do
-        parse Parser.project "" "+ProjectName" `shouldBe` Right (EProject "ProjectName")
+        parse Parser.project "" "+ProjectName" `shouldBe` Right (Tasks.SProject "ProjectName")
 
       it "Doesn't match ProjectName" $ do
-        parse Parser.project "" "ProjectName" `shouldNotBe` Right (EProject "ProjectName")
+        parse Parser.project "" "ProjectName" `shouldNotBe` Right (Tasks.SProject "ProjectName")
 
       it "Doesn't match @ProjectName" $ do
-        parse Parser.project "" "@ProjectName" `shouldNotBe` Right (EProject "ProjectName")
+        parse Parser.project "" "@ProjectName" `shouldNotBe` Right (Tasks.SProject "ProjectName")
 
     describe "Context" $ do
       it "Matches @ContextString" $ do
-        parse Parser.context "" "@ContextString" `shouldBe` Right (EContext "ContextString")
+        parse Parser.context "" "@ContextString" `shouldBe` Right (Tasks.SContext "ContextString")
 
       it "Doesn't match ContextString" $ do
-        parse Parser.context "" "ContextString" `shouldNotBe` Right (EContext "ContextString")
+        parse Parser.context "" "ContextString" `shouldNotBe` Right (Tasks.SContext "ContextString")
 
       it "Doesn't match +ContextString" $ do
-        parse Parser.context "" "+ContextString" `shouldNotBe` Right (EContext "ContextString")
+        parse Parser.context "" "+ContextString" `shouldNotBe` Right (Tasks.SContext "ContextString")
+
+    describe "Key Value Pair" $ do
+      it "Matches foo:bar" $ do
+        parse Parser.keyvalue "" "foo:bar" `shouldBe` Right (Tasks.SKeyValue $ KVString "foo" "bar")
+
+      it "Matches count:5" $ do
+        parse Parser.keyvalue "" "count:5" `shouldBe` Right (Tasks.SKeyValue $ KVString "count" "5")
+
+      it "Matches due:2017-03-13" $ do
+        parse Parser.keyvalue "" "due:2017-03-13" `shouldBe` Right (Tasks.SKeyValue $ KVDueDate (Date 2017 3 13))
 
     describe "Other Strings" $ do
       it "Matches Other123" $ do
-        parse Parser.other "" "Other123" `shouldBe` Right (EOther "Other123")
+        parse Parser.other "" "Other123" `shouldBe` Right (Tasks.SOther "Other123")
 
     describe "String Type Parser" $ do
       it "Matches +FooBar as Project" $ do
-        parse Parser.stringTypes "" "+FooBar" `shouldBe` Right (EProject "FooBar")
+        parse Parser.stringTypes "" "+FooBar" `shouldBe` Right (Tasks.SProject "FooBar")
 
       it "Matches @FooBar as Context" $ do
-        parse Parser.stringTypes "" "@FooBar" `shouldBe` Right (EContext "FooBar")
+        parse Parser.stringTypes "" "@FooBar" `shouldBe` Right (Tasks.SContext "FooBar")
 
       it "Matches FooBar as other string" $ do
-        parse Parser.stringTypes "" "FooBar" `shouldBe` Right (EOther "FooBar")
+        parse Parser.stringTypes "" "FooBar" `shouldBe` Right (Tasks.SOther "FooBar")
 
     describe "A lot of string types" $ do
       it "Matches: Example @Haskell @Parsing task for +TodoTxt +Blog post" $ do
-        parse Parser.lots "" "Example @Haskell @Parsing task for +TodoTxt +Blog post"
+        parse Parser.lots "" "Example @Haskell @Parsing task for +TodoTxt +Blog post due:today"
           `shouldBe` Right [
-                             (EOther "Example")
-                           , (EContext "Haskell")
-                           , (EContext "Parsing")
-                           , (EOther "task")
-                           , (EOther "for")
-                           , (EProject "TodoTxt")
-                           , (EProject "Blog")
-                           , (EOther "post")
+                             (Tasks.SOther "Example")
+                           , (Tasks.SContext "Haskell")
+                           , (Tasks.SContext "Parsing")
+                           , (Tasks.SOther "task")
+                           , (Tasks.SOther "for")
+                           , (Tasks.SProject "TodoTxt")
+                           , (Tasks.SProject "Blog")
+                           , (Tasks.SOther "post")
+                           , (Tasks.SKeyValue (KVString "due" "today"))
                            ]
     describe "Tasks" $ do
-      let i1 = Incomplete Nothing Nothing ["Project"] ["Context"] "Basic task @Context and +Project"
-      let i2 = Incomplete Nothing (Just $ Date 2017 2 1) ["Project"] ["Context"] "Basic task @Context and +Project"
-      let i3 = Incomplete (Just 'A') Nothing ["Project"] ["Context"] "Basic task @Context and +Project"
-      let i4 = Incomplete (Just 'A') (Just $ Date 2017 2 1) ["Project"] ["Context"] "Basic task @Context and +Project"
+      let i1 = Incomplete Nothing Nothing [Tasks.SOther "Basic", Tasks.SOther "task", Tasks.SContext "Context", Tasks.SOther "and", Tasks.SProject "Project"]
+      let i2 = Incomplete Nothing (Just $ Date 2017 2 1) [Tasks.SOther "Basic", Tasks.SOther "task", Tasks.SContext "Context", Tasks.SOther "and", Tasks.SProject "Project"]
+      let i3 = Incomplete (Just 'A') Nothing [Tasks.SOther "Basic", Tasks.SOther "task", Tasks.SContext "Context", Tasks.SOther "and", Tasks.SProject "Project"]
+      let i4 = Incomplete (Just 'A') (Just $ Date 2017 2 1) [Tasks.SOther "Basic", Tasks.SOther "task", Tasks.SContext "Context", Tasks.SOther "and", Tasks.SProject "Project"]
       let c1 = Completed (Date 2017 3 1) i1
       let c2 = Completed (Date 2017 3 1) i2
       let c3 = Completed (Date 2017 3 1) i3

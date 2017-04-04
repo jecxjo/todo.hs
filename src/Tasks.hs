@@ -4,14 +4,30 @@ module Tasks
   , Project
   , Context
   , Date(..)
+  , KeyValue(..)
+  , StringTypes(..)
   , Task(..)
   , onlyPending
   , onlyCompleted
   , filterProjects
   , filterContext
+  , convertToDate
+  , convertStringTypes
+  , getProjects
+  , getContexts
+  , getKeyValues
+  , extractDueDate
   ) where
 
-import Util (subsetOf)
+import Util (subsetOf, MonadDate(..), getToday)
+
+import Control.Monad.Trans.Class (lift)
+import Data.Char (toLower)
+import Data.List (find)
+import Data.Time (getCurrentTime, toGregorian, utctDay)
+import Data.Time.Calendar (addDays)
+import Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
+import Data.Traversable (forM)
 
 -- |Priority: (A)
 type Priority = Char
@@ -48,16 +64,62 @@ instance Ord Date where
                                                  then compare m1 m2
                                                  else compare d1 d2
 
+-- |Key Value pairs: due:2017-01-02
+data KeyValue = KVDueDate Date
+              | KVString String String
+              deriving (Eq)
+
+instance Show KeyValue where
+  show (KVDueDate date) = "due:" ++ (show date)
+  show (KVString key value) = key ++ ":" ++ value
+
+
+-- |String Types
+data StringTypes = SProject Project
+                 | SContext Context
+                 | SKeyValue KeyValue
+                 | SOther String
+                 deriving Eq
+
+instance Show StringTypes where
+  show (SProject p) = "+" ++ p
+  show (SContext c) = "@" ++ c
+  show (SKeyValue kv) = show kv
+  show (SOther s) = s
+
+unrollStringTypes :: [StringTypes] -> String
+unrollStringTypes = unwords . map show
+
+getProjects :: [StringTypes] -> [Project]
+getProjects = map (\(SProject p) -> p) . filter fn
+  where fn (SProject _) = True
+        fn _ = False
+
+getContexts :: [StringTypes] -> [Context]
+getContexts = map (\(SContext c) -> c) . filter fn
+  where fn (SContext _) = True
+        fn _ = False
+
+getKeyValues :: [StringTypes] -> [KeyValue]
+getKeyValues = map (\(SKeyValue kv) -> kv) . filter fn
+  where fn (SKeyValue _) = True
+        fn _ = False
+
+extractDueDate :: [StringTypes] -> Maybe Date
+extractDueDate [] = Nothing
+extractDueDate ((SKeyValue (KVDueDate d)):_) = Just d
+extractDueDate (_:xs) = extractDueDate xs
+
 -- |Data type to store both incomplete and completed tasks.
-data Task = Incomplete (Maybe Priority) (Maybe Date) [Project] [Context] String
+data Task = Incomplete (Maybe Priority) (Maybe Date) [StringTypes]
           | Completed Date Task
 
 -- |Show Task in format "(A) 2016-07-30 Task to do +Project @Context"
 instance Show Task where
   show (Completed date task) = "x " ++ (show date) ++ " " ++ (show task)
-  show (Incomplete mPriority mDate _ _ str) = (showPriority mPriority)
-                                              ++ (showDate mDate)
-                                              ++ str
+  show (Incomplete mPriority mDate sx) = (showPriority mPriority)
+                                                ++ (showDate mDate)
+                                                ++ (unrollStringTypes sx)
     where showPriority (Just p) = "(" ++ [p] ++ ") "
           showPriority Nothing = ""
           showDate (Just d) = show d ++ " "
@@ -65,31 +127,31 @@ instance Show Task where
 
 -- |Comparisons are done based on priority
 instance Eq Task where
-  (Incomplete Nothing _ _ _ _) == (Incomplete Nothing _ _ _ _) = True
-  (Incomplete (Just _) _ _ _ _) == (Incomplete Nothing _ _ _ _) = False
-  (Incomplete Nothing _ _ _ _) == (Incomplete (Just _) _ _ _ _) = False
-  (Incomplete (Just a) _ _ _ _) == (Incomplete (Just b) _ _ _ _) = a == b
-  (Incomplete _ _ _ _ _) == (Completed _ _) = False
-  (Completed _ _) == (Incomplete _ _ _ _ _) = False
+  (Incomplete Nothing _ _) == (Incomplete Nothing _ _) = True
+  (Incomplete (Just _) _ _) == (Incomplete Nothing _ _) = False
+  (Incomplete Nothing _ _) == (Incomplete (Just _) _ _) = False
+  (Incomplete (Just a) _ _) == (Incomplete (Just b) _ _) = a == b
+  (Incomplete _ _ _) == (Completed _ _) = False
+  (Completed _ _) == (Incomplete _ _ _) = False
   (Completed _ t1) == (Completed _ t2) = t1 == t2
 
 -- |Comparisons are done based on priority. Since we want A > B, all the
 -- comparisons are backwards.
 instance Ord Task where
-  compare (Incomplete Nothing _ _ _ _) (Incomplete Nothing _ _ _ _) = EQ
-  compare (Incomplete (Just _) _ _ _ _) (Incomplete Nothing _ _ _ _) = GT
-  compare (Incomplete Nothing _ _ _ _) (Incomplete (Just _) _ _ _ _) = LT
-  compare (Incomplete _ _ _ _ _) (Completed _ _) = LT
-  compare (Completed _ _) (Incomplete _ _ _ _ _) = GT
+  compare (Incomplete Nothing _ _) (Incomplete Nothing _ _) = EQ
+  compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = GT
+  compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = LT
+  compare (Incomplete _ _ _) (Completed _ _) = LT
+  compare (Completed _ _) (Incomplete _ _ _) = GT
   -- The following are backwards on purpose, to get A > B
-  compare (Incomplete (Just a) _ _ _ _) (Incomplete (Just b) _ _ _ _) =
+  compare (Incomplete (Just a) _ _) (Incomplete (Just b) _ _) =
     compare b a
   compare (Completed _ t1) (Completed _ t2) = compare t2 t1
 
 -- |Filters out all completed tasks and returns a list of incomplete
 onlyPending :: [Task] -> [Task]
 onlyPending = filter isPending
-  where isPending (Incomplete _ _ _ _ _) = True
+  where isPending (Incomplete _ _ _) = True
         isPending _ = False
 
 -- |Filters out all incomplete tasks and returns a list of completed
@@ -102,12 +164,54 @@ onlyCompleted = filter isCompleted
 -- defined by todo.txt
 filterProjects :: [Project] -> [Task] -> [Task]
 filterProjects px = filter projectFilter
-  where projectFilter (Incomplete _ _ projs _ _) = px `subsetOf` projs
+  where projectFilter (Incomplete _ _ sx) = px `subsetOf` (getProjects sx)
         projectFilter (Completed _ t) = projectFilter t
 
 -- |Filters based on Context. Strings for context should not contain '@' as
 -- defined by todo.txt
 filterContext :: [Context] -> [Task] -> [Task]
 filterContext cx = filter contextFilter
-  where contextFilter (Incomplete _ _ _ ctx _) = cx `subsetOf` ctx
+  where contextFilter (Incomplete _ _ sx) = cx `subsetOf` (getContexts sx)
         contextFilter (Completed _ t) = contextFilter t
+
+-- |Convert String to Date
+convertToDate :: MonadDate m => String -> m Date
+convertToDate str = do
+    let dateStr = map toLower str
+    let dateNum = toNum dateStr
+    today <- getToday
+    let (yr,wk,wday) = toWeekDate $ today
+    case dateStr of
+      "today" -> return $ genDate $ toGregorian $ today
+      "tomorrow" -> return $ genDate $ toGregorian $ addDays 1 $ today
+      "yesterday" -> return $ genDate $ toGregorian $ addDays (-1) $ today
+      _       -> if dateNum <= wday
+                 then do
+                    return $ genDate $ toGregorian $ addDays 7 $ fromWeekDate yr wk dateNum
+                 else do
+                    return $ genDate $ toGregorian $ fromWeekDate yr wk dateNum
+  where
+    toNum "monday" = 1
+    toNum "tuesday" = 2
+    toNum "wednesday" = 3
+    toNum "thursday" = 4
+    toNum "friday" = 5
+    toNum "saturday" = 6
+    toNum "sunday" = 7
+    toNum _ = error "Bad Due Date"
+    genDate (y,m,d) = Date y m d
+
+-- |Convert all KV Due Dates that are strings into actual dates
+convertStringType :: MonadDate m => StringTypes -> m StringTypes
+convertStringType (SKeyValue kv) = do
+    case kv of
+      KVString "due" val -> do
+        converted <- convertToDate val
+        return . SKeyValue $ KVDueDate converted
+      rest ->  do
+        return $ SKeyValue rest
+convertStringType rest = do
+  return rest
+
+convertStringTypes :: MonadDate m => [StringTypes] -> m [StringTypes]
+convertStringTypes alst = forM alst convertStringType

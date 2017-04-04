@@ -8,9 +8,10 @@ module Commands
 
 import Control.Monad (forM_)
 import Data.Char (toUpper)
-import Data.List (sort, isPrefixOf)
+import Data.List (sort, isPrefixOf, sortBy, find)
 import Data.Maybe (isJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
+import Data.Time.Calendar (Day(..))
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath)
 
@@ -18,15 +19,23 @@ import FileHandler (readTodoTxt, writeTodoTxt)
 import Parser (validateLine)
 import Tasks ( Task(..)
              , Date(..)
+             , StringTypes(..)
+             , KeyValue(..)
              , Priority
              , Project
              , Context
              , onlyPending
              , onlyCompleted
-             , filterProjects
-             , filterContext)
-import Util (subsetOf)
+             , getProjects
+             , getContexts
+             , convertStringTypes)
+import Util (subsetOf, MonadDate(..))
 import Version (version)
+
+instance MonadDate IO where
+  getDay = do
+    c <- getCurrentTime
+    return $ utctDay c
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
@@ -57,18 +66,28 @@ todoFilePath = do
 filterTupleProjects :: [Project] -> [(Int, Task)] -> [(Int, Task)]
 filterTupleProjects px = filter projectFilter
   where
-    projectFilter (_, (Incomplete _ _ projs _ _)) = px `subsetOf` projs
-    projectFilter (_, (Completed _ (Incomplete _ _ projs _ _))) =
-      px `subsetOf` projs
+    projectFilter (_, (Incomplete _ _ sx)) = px `subsetOf` (getProjects sx)
+    projectFilter (_, (Completed _ (Incomplete _ _ sx))) =
+      px `subsetOf` (getProjects sx)
 
 -- |Filter tasks based on Context.
 -- Expects to be in a numbered tuple.
 filterTupleContexts :: [Context] -> [(Int, Task)] -> [(Int, Task)]
 filterTupleContexts cx = filter contextFilter
   where
-    contextFilter (_, (Incomplete _ _ _ ctx _)) = cx `subsetOf` ctx
-    contextFilter (_, (Completed _ (Incomplete _ _ _ ctx _))) =
-      cx `subsetOf` ctx
+    contextFilter (_, (Incomplete _ _ sx)) = cx `subsetOf` (getContexts sx)
+    contextFilter (_, (Completed _ (Incomplete _ _ sx))) =
+      cx `subsetOf` (getContexts sx)
+
+-- |Filter tasks based on Due Date.
+-- Expectes to be in a numbered tuple.
+filterTupleDueDate :: [(Int, Task)] -> [(Int, Task)]
+filterTupleDueDate = filter containsDueDate
+  where
+    isDue (SKeyValue (KVDueDate _)) = True
+    isDue _ = False
+    containsDueDate (_, (Incomplete _ _ sx)) = foldl (||) False $ map isDue sx
+    containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = foldl (||) False $ map isDue sx
 
 -- |Pass in command line arguments to be processed
 processArgs :: [String] -> IO ()
@@ -131,13 +150,17 @@ process cfg ("add":rest) = process' (todoTxtPath cfg) addToList
                             Right newLine -> do
                               if isJust (timeStamp cfg)
                               then do
-                                let Incomplete pri _ pro con str = newLine
-                                let newTask = Incomplete pri (timeStamp cfg) pro con str
+                                let Incomplete pri _ sx = newLine
+                                sx' <- convertStringTypes sx
+                                let newTask = Incomplete pri (timeStamp cfg) sx'
                                 writeTodoTxt (todoTxtPath cfg) (newTask:oldLines)
                                 putStrLn $ "New Task: " ++ show newTask
                               else do
-                                writeTodoTxt (todoTxtPath cfg) (newLine:oldLines)
-                                putStrLn $ "New Task: " ++ show newLine
+                                let Incomplete pri due sx = newLine
+                                sx' <- convertStringTypes sx
+                                let newTask = Incomplete pri due sx'
+                                writeTodoTxt (todoTxtPath cfg) (newTask:oldLines)
+                                putStrLn $ "New Task: " ++ show newTask
 
 -- |Delete task
 -- Command Line: delete 1
@@ -198,8 +221,11 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
             case validateLine (show m ++ " " ++ unwords rest) of
               Left e -> error $ show e
               Right updated -> do
-                writeTodoTxt (todoTxtPath cfg) (updated:nonMatch)
-                putStrLn $ "Updated Task: " ++ show updated
+                let Incomplete pri due sx = updated
+                sx' <- convertStringTypes sx
+                let updated' = Incomplete pri due sx'
+                writeTodoTxt (todoTxtPath cfg) (updated':nonMatch)
+                putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in append"
       else do
         error "Invalid Index"
@@ -224,6 +250,15 @@ process cfg ("priority":idx:[]) = process' (todoTxtPath cfg) go
       let nIdx = read idx :: Int
       updatePriority (todoTxtPath cfg) nIdx Nothing xs
 
+process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
+  where
+    listSome = (\xss -> forM_ xss printTuple)
+             . filterTupleDueDate
+             . numberify
+             . reverse
+             . sort
+             . onlyPending
+
 -- |Help output
 -- Command Line: help
 process _ ("help":_) = do
@@ -242,6 +277,11 @@ process _ ("help":_) = do
   putStrLn " version"
   putStrLn " append TASKNUM \"addition to task\""
   putStrLn " help"
+  putStrLn ""
+  putStrLn "Key Value Supported:"
+  putStrLn " due - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday"
+  putStrLn " all other use defined key/value pairs viewed as text"
+
 
 -- |Show Version
 -- Command Lin: version
@@ -263,8 +303,8 @@ updatePriority path nIdx mPri xs = do
   then do
     let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
     let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
-    let updated = map (\(Incomplete _ d pro con str) ->
-                          Incomplete mPri d pro con str) matches
+    let updated = map (\(Incomplete _ d sx) ->
+                          Incomplete mPri d sx) matches
     writeTodoTxt path (updated ++ nonMatch)
     putStrLn "Updated Priority"
   else do

@@ -27,6 +27,7 @@ library
                      , directory
                      , filepath
                      , time
+                     , transformers
   default-language:    Haskell2010
 
 executable todo-exe
@@ -49,6 +50,7 @@ test-suite todo-test
                      , directory
                      , filepath
                      , regex-posix
+                     , time
   ghc-options:         -Wall
   default-language:    Haskell2010
 
