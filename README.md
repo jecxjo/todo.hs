@@ -1,6 +1,9 @@
 # todo.hs
 A haskell implementation of todo.txt
 
+This application was created as a series of blog posts to cover some of the
+concepts of Haskell. To go through the development process go [here][2]
+
 ## Supported Features (0.0.1)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
@@ -67,6 +70,6 @@ just deletes the entry.
 ## Future features
 
 - Sort by Due Dates (due:2017-07-29)
-- Configuratable location of todo.txt
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
+[2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types
