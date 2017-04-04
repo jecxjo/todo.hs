@@ -167,10 +167,11 @@ process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
     deleteIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         writeTodoTxt (todoTxtPath cfg)
-                     $ denumbrify $ filter (\(n, _) -> n /= nIdx) xss
+                     $ (denumbrify $ filter (\(n, _) -> n /= nIdx) xss) ++ completed
         putStrLn "Task Deleted"
       else do
         error "Invalid Index"
@@ -182,14 +183,15 @@ process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
     completeIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         c <- getCurrentTime
         let (y, m, d) = toGregorian $ utctDay c
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
         let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
-        let completed = map (\t -> Completed (Date y m d) t) matches
-        writeTodoTxt (todoTxtPath cfg) (nonMatch ++ completed)
+        let complete = map (\t -> Completed (Date y m d) t) matches
+        writeTodoTxt (todoTxtPath cfg) (nonMatch ++ complete ++ completed)
         putStrLn "Task Completed"
       else do
         error "Invalid Index"
@@ -209,6 +211,7 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
     appendIdx xs = do
       let nIdx = read idx :: Int
       let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
@@ -221,7 +224,7 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
                 let Incomplete pri due sx = updated
                 sx' <- convertStringTypes sx
                 let updated' = Incomplete pri due sx'
-                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'])
+                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in append"
       else do
@@ -295,13 +298,14 @@ process cfg _ = process cfg ("help":[])
 updatePriority :: FilePath -> Int -> Maybe Priority -> [Tasks.Task] -> IO ()
 updatePriority path nIdx mPri xs = do
   let xss = numberify $ reverse $ sort $ onlyPending xs
+  let completed = onlyCompleted xs
   if (length xs >= nIdx) && (nIdx > 0)
   then do
     let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
     let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
     let updated = map (\(Incomplete _ d sx) ->
                           Incomplete mPri d sx) matches
-    writeTodoTxt path (nonMatch ++ updated)
+    writeTodoTxt path (nonMatch ++ updated ++ completed)
     putStrLn "Updated Priority"
   else do
     error "Invalid Index"
