@@ -119,6 +119,7 @@ kvduedate :: Parser Tasks.StringTypes
 kvduedate = try $ do
   string "due:"
   d <- date
+  whiteSpace
   return $ Tasks.SKeyValue $ Tasks.KVDueDate d
 
 keyvalue :: Parser Tasks.StringTypes
