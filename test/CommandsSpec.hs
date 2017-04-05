@@ -65,9 +65,9 @@ spec =
           process cfg (words "add Task 2")
           process cfg (words "add Task 3")
           process cfg (words "append 2 in +Project")
-          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("Task 2 in \\+Project\\\n" ++
-                                                             "Task 1\\\n" ++
-                                                             "Task 3") :: Bool))
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("Task 1\\\n" ++
+                                                                          "Task 3\\\n" ++
+                                                                          "Task 2 in \\+Project") :: Bool))
 
         it "does not append an invalid index" $ do
           process cfg (words "add Task 1")
@@ -148,3 +148,28 @@ spec =
           process cfg (words "add Task 1")
           process cfg (words "priority 1 a")
           getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(A) Task 1")
+
+    describe "Order of entries" $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
+        it "adds in order" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1\nTask 2\nTask 3")
+
+
+        it "Adds, delete and adds again" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "delete 2")
+          process cfg (words "add Task 4")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1\nTask 3\nTask 4")
+
+        it "Adds and appends" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "append 2 foo")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1\nTask 3\nTask 2 foo")
+        

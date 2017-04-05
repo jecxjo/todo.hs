@@ -113,7 +113,6 @@ process :: ConfigOption -> [String] -> IO ()
 -- Command Line:
 process cfg [] = process' (todoTxtPath cfg) listAll
   where listAll = (\xss -> forM_ xss printTuple) . numberify
-                                                 . reverse
                                                  . sort
                                                  . onlyPending
 
@@ -137,7 +136,6 @@ process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
     listSome = (\xss -> forM_ xss printTuple) . fC
                                               . fP
                                               . numberify
-                                              . reverse
                                               . sort
                                               . onlyPending
 
@@ -153,13 +151,13 @@ process cfg ("add":rest) = process' (todoTxtPath cfg) addToList
                                 let Incomplete pri _ sx = newLine
                                 sx' <- convertStringTypes sx
                                 let newTask = Incomplete pri (timeStamp cfg) sx'
-                                writeTodoTxt (todoTxtPath cfg) (newTask:oldLines)
+                                writeTodoTxt (todoTxtPath cfg) (oldLines ++ [newTask])
                                 putStrLn $ "New Task: " ++ show newTask
                               else do
                                 let Incomplete pri due sx = newLine
                                 sx' <- convertStringTypes sx
                                 let newTask = Incomplete pri due sx'
-                                writeTodoTxt (todoTxtPath cfg) (newTask:oldLines)
+                                writeTodoTxt (todoTxtPath cfg) (oldLines ++ [newTask])
                                 putStrLn $ "New Task: " ++ show newTask
 
 -- |Delete task
@@ -168,7 +166,7 @@ process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
   where
     deleteIdx xs = do
       let nIdx = read idx :: Int
-      let xss = numberify $ reverse $ sort $ onlyPending xs
+      let xss = numberify $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         writeTodoTxt (todoTxtPath cfg)
@@ -183,7 +181,7 @@ process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
   where
     completeIdx xs = do
       let nIdx = read idx :: Int
-      let xss = numberify $ reverse $ sort $ onlyPending xs
+      let xss = numberify $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         c <- getCurrentTime
@@ -201,7 +199,6 @@ process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
 process cfg ("completed":[]) = process' (todoTxtPath cfg) completed
   where
     completed = (\xss -> forM_ xss printTuple) . numberify
-                                               . reverse
                                                . sort
                                                . onlyCompleted
 
@@ -211,7 +208,7 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
   where
     appendIdx xs = do
       let nIdx = read idx :: Int
-      let xss = numberify $ reverse $ sort $ onlyPending xs
+      let xss = numberify $ sort $ onlyPending xs
       if (length xss >= nIdx) && (nIdx > 0)
       then do
         let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
@@ -224,7 +221,7 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
                 let Incomplete pri due sx = updated
                 sx' <- convertStringTypes sx
                 let updated' = Incomplete pri due sx'
-                writeTodoTxt (todoTxtPath cfg) (updated':nonMatch)
+                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'])
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in append"
       else do
@@ -255,7 +252,6 @@ process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
     listSome = (\xss -> forM_ xss printTuple)
              . filterTupleDueDate
              . numberify
-             . reverse
              . sort
              . onlyPending
 
@@ -305,7 +301,7 @@ updatePriority path nIdx mPri xs = do
     let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
     let updated = map (\(Incomplete _ d sx) ->
                           Incomplete mPri d sx) matches
-    writeTodoTxt path (updated ++ nonMatch)
+    writeTodoTxt path (nonMatch ++ updated)
     putStrLn "Updated Priority"
   else do
     error "Invalid Index"

@@ -118,16 +118,16 @@ spec =
           (Completed (Date 2017 2 2) (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"])) == (Completed (Date 2017 2 2) (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"])) `shouldBe` True
 
         it "Two Incomplete priority is higher than no priority" $ do
-          (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) `compare` (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` GT
+          (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) `compare` (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` LT
 
         it "Two Incomplete no priority is lower than priority" $ do
-          (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `compare` (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) `shouldBe` LT
+          (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `compare` (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) `shouldBe` GT
 
         it "Two Incomplete A > B" $ do
-          (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"]) `compare` (Incomplete (Just 'B') Nothing [SOther "Example", SOther "task"]) `shouldBe` GT
+          (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"]) `compare` (Incomplete (Just 'B') Nothing [SOther "Example", SOther "task"]) `shouldBe` LT
 
         it "Two Incomplete B < A" $ do
-          (Incomplete (Just 'B') Nothing [SOther "Example", SOther "task"]) `compare` (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` LT
+          (Incomplete (Just 'B') Nothing [SOther "Example", SOther "task"]) `compare` (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` GT
 
       describe "Filters" $ do
         let i1 = Incomplete Nothing Nothing [SOther "Base", SOther "Incomplete", SOther "Task"]

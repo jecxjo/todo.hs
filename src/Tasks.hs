@@ -135,18 +135,16 @@ instance Eq Task where
   (Completed _ _) == (Incomplete _ _ _) = False
   (Completed _ t1) == (Completed _ t2) = t1 == t2
 
--- |Comparisons are done based on priority. Since we want A > B, all the
--- comparisons are backwards.
+-- |Comparisons are done based on priority.
 instance Ord Task where
   compare (Incomplete Nothing _ _) (Incomplete Nothing _ _) = EQ
-  compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = GT
-  compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = LT
-  compare (Incomplete _ _ _) (Completed _ _) = LT
-  compare (Completed _ _) (Incomplete _ _ _) = GT
-  -- The following are backwards on purpose, to get A > B
+  compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = LT
+  compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = GT
+  compare (Incomplete _ _ _) (Completed _ _) = GT
+  compare (Completed _ _) (Incomplete _ _ _) = LT
   compare (Incomplete (Just a) _ _) (Incomplete (Just b) _ _) =
-    compare b a
-  compare (Completed _ t1) (Completed _ t2) = compare t2 t1
+    compare a b
+  compare (Completed _ t1) (Completed _ t2) = compare t1 t2
 
 -- |Filters out all completed tasks and returns a list of incomplete
 onlyPending :: [Task] -> [Task]
