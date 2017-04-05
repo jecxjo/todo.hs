@@ -84,21 +84,27 @@ date = do
                         then x + 2000
                         else x
 
--- |Project: +ProjectName
+-- |Project: +ProjectName +Project.SubProject +Project-Sub-SubSub
 project :: Parser Tasks.StringTypes
 project = do
-  char '+'
-  s <- many1 alphaNum
-  whiteSpace
-  return $ Tasks.SProject s
+    char '+'
+    c <- alphaNum
+    s <- many alphaNumDashDot
+    whiteSpace
+    return $ Tasks.SProject ([c] ++ s)
+  where
+    alphaNumDashDot = choice [alphaNum, oneOf "-."]
 
 -- |Context: @ContextString
 context :: Parser Tasks.StringTypes
 context = do
-  char '@'
-  s <- many1 alphaNum
-  whiteSpace
-  return $ Tasks.SContext s
+    char '@'
+    c <- alphaNum
+    s <- many alphaNumDashDotPlusAmp
+    whiteSpace
+    return $ Tasks.SContext ([c] ++ s)
+  where
+    alphaNumDashDotPlusAmp = choice [alphaNum, oneOf "-.@+"]
 
 -- |Key Value Pair: key:value
 kvstring :: Parser Tasks.StringTypes
