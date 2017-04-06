@@ -66,10 +66,33 @@ The complete/done command will change an incomplete task to completed.
 The delete command removes the incomplete task from your todo.txt file. Doesn't not mark complete,
 just deletes the entry.
 
+**Append**
+
+
+    $ todo
+    1: Complete this
+    $ todo append 1 "task tomorrow"
+    Updated Task: Complete this task tomorrow
+    $ todo
+    1: Complete this task tomorrow
+
+**Priority**
+
+    $ todo
+    1: Example Task
+    $ todo pri 1 a
+    Updated Priority
+    $ todo
+    1: (A) Example Task
+    $ todo pri 1
+    Updated Priority
+    $ todo
+    1: Example Task
 
 ## Future features
 
-- Sort by Due Dates (due:2017-07-29)
+- Search based on terms
+- Colored output
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
 [2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types

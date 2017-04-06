@@ -80,7 +80,7 @@ filterTupleContexts cx = filter contextFilter
       cx `subsetOf` (getContexts sx)
 
 -- |Filter tasks based on Due Date.
--- Expectes to be in a numbered tuple.
+-- Expects to be in a numbered tuple.
 filterTupleDueDate :: [(Int, Task)] -> [(Int, Task)]
 filterTupleDueDate = filter containsDueDate
   where
@@ -88,6 +88,19 @@ filterTupleDueDate = filter containsDueDate
     isDue _ = False
     containsDueDate (_, (Incomplete _ _ sx)) = foldl (||) False $ map isDue sx
     containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = foldl (||) False $ map isDue sx
+
+-- |Sort tuple based on Due Date
+-- Expects to be in a numbered tuple.
+sortTupleDueDate :: [(Int, Task)] -> [(Int, Task)]
+sortTupleDueDate = sortBy sortFn
+  where
+    isDue (SKeyValue (KVDueDate _)) = True
+    isDue _ = False
+    getDueDate (Incomplete _ _ sx) = case find isDue sx of
+                                      Just (SKeyValue (KVDueDate d)) -> Just d
+                                      _ -> Nothing
+    getDueDate _ = Nothing
+    sortFn (_, x) (_, y) = compare (getDueDate x) (getDueDate y)
 
 -- |Pass in command line arguments to be processed
 processArgs :: [String] -> IO ()
@@ -253,6 +266,7 @@ process cfg ("priority":idx:[]) = process' (todoTxtPath cfg) go
 process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
   where
     listSome = (\xss -> forM_ xss printTuple)
+             . sortTupleDueDate
              . filterTupleDueDate
              . numberify
              . sort
@@ -275,6 +289,7 @@ process _ ("help":_) = do
   putStrLn " priority|pri TASKNUM NEWPRIORITY"
   putStrLn " version"
   putStrLn " append TASKNUM \"addition to task\""
+  putStrLn " due"
   putStrLn " help"
   putStrLn ""
   putStrLn "Key Value Supported:"
