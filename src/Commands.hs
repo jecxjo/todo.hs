@@ -6,7 +6,7 @@ module Commands
     , ConfigOption(..)
     ) where
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, msum)
 import Data.Char (toUpper)
 import Data.List (sort, isPrefixOf, sortBy, find, isInfixOf)
 import Data.Maybe (isJust)
@@ -239,6 +239,60 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
       else do
         error "Invalid Index"
 
+-- |Prepend to a currently existing task
+-- Command Line: prepend 1 Text to add to task 1
+process cfg ("prepend":idx:rest) = process' (todoTxtPath cfg) prependIdx
+  where
+    prependIdx xs = do
+      let nIdx = read idx :: Int
+      let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
+      if (length xss >= nIdx) && (nIdx > 0)
+      then do
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        case matches of
+          [m] -> do
+            case validateLine (unwords rest ++ " " ++ show m ++ " ") of
+              Left e -> error $ show e
+              Right updated -> do
+                let Incomplete pri due sx = updated
+                sx' <- convertStringTypes sx
+                let updated' = Incomplete pri due sx'
+                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
+                putStrLn $ "Updated Task: " ++ show updated'
+          _ -> do error "Error in prepend"
+      else do
+        error "Invalid Index"
+
+-- |Replace existing task with text
+-- Command Line: replace 1 "New text for task 1"
+process cfg ("replace":idx:rest) = process' (todoTxtPath cfg) replaceIdx
+  where
+    replaceIdx xs = do
+      let nIdx = read idx :: Int
+      let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
+      if (length xss >= nIdx) && (nIdx > 0)
+      then do
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        case matches of
+          [m] -> do
+            case validateLine (unwords rest) of
+              Left e -> error $ show e
+              Right updated -> do
+                let Incomplete pri dt sx = updated
+                let Incomplete pri' dt' _ = m
+                let dt'' = timeStamp cfg
+                sx' <- convertStringTypes sx
+                let updated' = Incomplete (msum [pri, pri']) (msum [dt,dt',dt'']) sx'
+                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
+                putStrLn $ "Updated Task: " ++ show updated'
+          _ -> do error "Error in replace"
+      else do
+        error "Invalid Index"
+
 -- |Modifies the priority of a previously existing task
 -- Command Line: priorty 1 B
 process cfg ("priority":idx:priority:[]) = process' (todoTxtPath cfg) go
@@ -285,6 +339,8 @@ process _ ("help":_) = do
   putStrLn " priority|pri TASKNUM NEWPRIORITY"
   putStrLn " version"
   putStrLn " append TASKNUM \"addition to task\""
+  putStrLn " prepend TASKNUM \"prepend to task\""
+  putStrLn " replace TASKNUM \"text to replace\""
   putStrLn " due"
   putStrLn " help"
   putStrLn ""

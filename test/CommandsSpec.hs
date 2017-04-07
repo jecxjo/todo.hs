@@ -74,6 +74,49 @@ spec =
           process cfg (words "add Task 2")
           process cfg (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index")
 
+    describe "Prepend action" $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
+        it "prepends to single entry" $ do
+          process cfg (words "add example task")
+          process cfg (words "prepend 1 An")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "An example task")
+
+        it "prepends a middle entry" $ do
+          process cfg (words "add Task 1")
+          process cfg (words "add Task 2")
+          process cfg (words "add Task 3")
+          process cfg (words "prepend 2 +Project has")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldSatisfy` (\x -> x =~ ("Task 1\\\n" ++
+                                                                          "Task 3\\\n" ++
+                                                                          "\\+Project has Task 2") :: Bool))
+
+    describe "Replace action" $ do
+      before_ (removeIfExists $ todoTxtPath cfg) $ do
+        it "replaces text only" $ do
+          process cfg (words "add example task")
+          process cfg (words "replace 1 foo bar")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "foo bar")
+
+        it "replaces text and keeps priority" $ do
+          process cfg (words "add (A) example task")
+          process cfg (words "replace 1 foo bar")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(A) foo bar")
+
+        it "replaces text and priority" $ do
+          process cfg (words "add (A) example task")
+          process cfg (words "replace 1 (B) foo bar")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "(B) foo bar")
+
+        it "replaces text and keeps timestamp" $ do
+          process cfg (words "add 2017-04-07 example task")
+          process cfg (words "replace 1 foo bar")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "2017-04-07 foo bar")
+
+        it "replaces text and timestamp" $ do
+          process cfg (words "add 2017-04-07 example task")
+          process cfg (words "replace 1 2017-04-08 foo bar")
+          getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "2017-04-08 foo bar")
+
     describe "Complete action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
         it "completes a new entry with no priority or date" $ do
