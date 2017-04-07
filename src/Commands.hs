@@ -8,7 +8,7 @@ module Commands
 
 import Control.Monad (forM_)
 import Data.Char (toUpper)
-import Data.List (sort, isPrefixOf, sortBy, find)
+import Data.List (sort, isPrefixOf, sortBy, find, isInfixOf)
 import Data.Maybe (isJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import Data.Time.Calendar (Day(..))
@@ -139,15 +139,11 @@ process cfg ("-s":rest) = do
   process (cfg { timeStamp = Just (Date y m d) }) rest
 
 -- |List entries with project and context filter
--- Command Line: list +Project @Context
+-- Command Line: list "string to match" +Project @Context
 process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
   where
-    projects = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "+" f) filters
-    contexts = map (\f -> drop 1 f) $ filter (\f -> isPrefixOf "@" f) filters
-    fP = filterTupleProjects projects
-    fC = filterTupleContexts contexts
-    listSome = (\xss -> forM_ xss printTuple) . fC
-                                              . fP
+    filterFn (_, t) = foldl (\b s -> b && (isInfixOf s (show t))) True filters
+    listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
                                               . numberify
                                               . sort
                                               . onlyPending

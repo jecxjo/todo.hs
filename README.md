@@ -4,7 +4,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.0.1)
+## Supported Features (0.0.2)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
 priority.
@@ -25,10 +25,14 @@ contexts and projects.
     1: Pick up milk @errands
     2: Pick up eggs @errands
     3: Pay Bills +LifeProblems
-    $ todo list @errands
+    4: Pick up dog from vet
+    $ todo ls "Pick up"
     1: Pick up milk @errands
     2: Pick up eggs @errands
-    $
+    4: Pick up dog from vet
+    $ todo ls "Pick up" @errands
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
 
 The list command supports optional filters for contexts and projects. List will find matches that
 contain all filter options.
