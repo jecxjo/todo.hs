@@ -4,7 +4,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.0.2)
+## Supported Features (0.0.3)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
 priority.
@@ -70,15 +70,19 @@ The complete/done command will change an incomplete task to completed.
 The delete command removes the incomplete task from your todo.txt file. Doesn't not mark complete,
 just deletes the entry.
 
-**Append**
+**Append/Prepend/Replace**
 
 
     $ todo
     1: Complete this
     $ todo append 1 "task tomorrow"
     Updated Task: Complete this task tomorrow
+    $ todo prepend 1 "IMPORTANT"
+    Updated Task: IMPORTANT Complete this task tomorrow
+    $ todo replace 1 "Do stuff tomorrow"
+    Updated Task: Do stuff tomorrow
     $ todo
-    1: Complete this task tomorrow
+    1: Do stuff tomorrow
 
 **Priority**
 
@@ -95,8 +99,9 @@ just deletes the entry.
 
 ## Future features
 
-- Search based on terms
 - Colored output
+- Reports
+- Regex based edits
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
 [2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types
