@@ -364,7 +364,7 @@ process cfg _ = process cfg ("help":[])
 
 updatePriority :: FilePath -> Int -> Maybe Priority -> [Tasks.Task] -> IO ()
 updatePriority path nIdx mPri xs = do
-  let xss = numberify $ reverse $ sort $ onlyPending xs
+  let xss = numberify $ sort $ onlyPending xs
   let completed = onlyCompleted xs
   if (length xs >= nIdx) && (nIdx > 0)
   then do
