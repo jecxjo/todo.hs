@@ -9,14 +9,16 @@ module Util
     , showIO
     , MonadDate(..)
     , getToday
+    , maybeRead
     ) where
 
+import Control.Exception
+import Data.IORef
+import Data.Maybe (listToMaybe)
+import Data.Time.Calendar (Day(..))
 import Prelude hiding (catch)
 import System.Directory
-import Control.Exception
 import System.IO.Error hiding (catch)
-import Data.IORef
-import Data.Time.Calendar (Day(..))
 
 -- |subsetOf filters a list that contains a set of elements
 subsetOf :: (Eq a, Foldable t) => [a] -> t a -> Bool
@@ -54,3 +56,7 @@ filterModify f g [x] = if (f x) then [g x] else []
 filterModify f g (x:xs) = if (f x)
                           then [g x] ++ filterModify f g xs
                           else filterModify f g xs
+
+-- |MaybeRead is like Read but instead of exception returns Nothing
+maybeRead :: Read a => String -> Maybe a
+maybeRead = fmap fst . listToMaybe . reads

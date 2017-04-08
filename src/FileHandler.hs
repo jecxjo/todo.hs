@@ -6,6 +6,7 @@ module FileHandler
 
 import Data.List (intercalate)
 import System.Directory (doesFileExist)
+import System.FilePath (replaceFileName, takeExtension)
 
 import Parser (parseLines, ParseError)
 import Tasks (Task)
@@ -30,3 +31,11 @@ readTodoTxt path = do
       lines <- readFile path
       return $ parseLines path lines
 
+
+-- |Write report file
+writeReport :: FilePath -> Integer -> Integer -> IO ()
+writeReport path incomplete complete = do
+    appendFile reportFile str
+  where
+   str = "DATETIME " ++ show incomplete ++ " " ++ show complete
+   reportFile = replaceFileName path $ "report" ++ takeExtension path

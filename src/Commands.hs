@@ -9,7 +9,7 @@ module Commands
 import Control.Monad (forM_, msum)
 import Data.Char (toUpper)
 import Data.List (sort, isPrefixOf, sortBy, find, isInfixOf)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import Data.Time.Calendar (Day(..))
 import System.Directory (getHomeDirectory)
@@ -29,7 +29,7 @@ import Tasks ( Task(..)
              , getProjects
              , getContexts
              , convertStringTypes)
-import Util (subsetOf, MonadDate(..))
+import Util (subsetOf, MonadDate(..), maybeRead)
 import Version (version)
 
 instance MonadDate IO where
@@ -174,36 +174,36 @@ process cfg ("add":rest) = process' (todoTxtPath cfg) addToList
 process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
   where
     deleteIdx xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let xss = numberify $ sort $ onlyPending xs
       let completed = onlyCompleted xs
-      if (length xss >= nIdx) && (nIdx > 0)
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
         writeTodoTxt (todoTxtPath cfg)
-                     $ (denumbrify $ filter (\(n, _) -> n /= nIdx) xss) ++ completed
+                     $ (denumbrify $ filter (\(n, _) -> n /= (fromJust nIdx)) xss) ++ completed
         putStrLn "Task Deleted"
       else do
-        error "Invalid Index"
+        error "Invalid Index: delete index"
 
 -- |Mark Task Complete
 -- Command Line: complete 1
 process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
   where
     completeIdx xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let xss = numberify $ sort $ onlyPending xs
       let completed = onlyCompleted xs
-      if (length xss >= nIdx) && (nIdx > 0)
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
         c <- getCurrentTime
         let (y, m, d) = toGregorian $ utctDay c
-        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
-        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
         let complete = map (\t -> Completed (Date y m d) t) matches
         writeTodoTxt (todoTxtPath cfg) (nonMatch ++ complete ++ completed)
         putStrLn "Task Completed"
       else do
-        error "Invalid Index"
+        error "Invalid Index: complete index"
 
 -- |List only completed tasks
 -- Command Line: completed
@@ -218,13 +218,13 @@ process cfg ("completed":[]) = process' (todoTxtPath cfg) completed
 process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
   where
     appendIdx xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let xss = numberify $ sort $ onlyPending xs
       let completed = onlyCompleted xs
-      if (length xss >= nIdx) && (nIdx > 0)
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
-        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
-        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
         case matches of
           [m] -> do
             case validateLine (show m ++ " " ++ unwords rest) of
@@ -237,20 +237,20 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in append"
       else do
-        error "Invalid Index"
+        error "Invalid Index: append index \"text to append\""
 
 -- |Prepend to a currently existing task
 -- Command Line: prepend 1 Text to add to task 1
 process cfg ("prepend":idx:rest) = process' (todoTxtPath cfg) prependIdx
   where
     prependIdx xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let xss = numberify $ sort $ onlyPending xs
       let completed = onlyCompleted xs
-      if (length xss >= nIdx) && (nIdx > 0)
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
-        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
-        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
         case matches of
           [m] -> do
             case validateLine (unwords rest ++ " " ++ show m ++ " ") of
@@ -263,20 +263,20 @@ process cfg ("prepend":idx:rest) = process' (todoTxtPath cfg) prependIdx
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in prepend"
       else do
-        error "Invalid Index"
+        error "Invalid Index: prepend index \"text to prepend\""
 
 -- |Replace existing task with text
 -- Command Line: replace 1 "New text for task 1"
 process cfg ("replace":idx:rest) = process' (todoTxtPath cfg) replaceIdx
   where
     replaceIdx xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let xss = numberify $ sort $ onlyPending xs
       let completed = onlyCompleted xs
-      if (length xss >= nIdx) && (nIdx > 0)
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
-        let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
-        let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
         case matches of
           [m] -> do
             case validateLine (unwords rest) of
@@ -291,7 +291,7 @@ process cfg ("replace":idx:rest) = process' (todoTxtPath cfg) replaceIdx
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in replace"
       else do
-        error "Invalid Index"
+        error "Invalid Index: replace index \"text to replace\""
 
 -- |Modifies the priority of a previously existing task
 -- Command Line: priorty 1 B
@@ -299,18 +299,18 @@ process cfg ("priority":idx:priority:[]) = process' (todoTxtPath cfg) go
   where
     isPriority char = (char >= 'A' && char <= 'Z')
     go xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       let nPri = toUpper $ head priority
       if isPriority nPri
       then do
         updatePriority (todoTxtPath cfg) nIdx (Just nPri) xs
       else do
-        error "Invalid Priority"
+        error "Invalid Priority: Valid values A-Z or left blank for no priority"
 
 process cfg ("priority":idx:[]) = process' (todoTxtPath cfg) go
   where
     go xs = do
-      let nIdx = read idx :: Int
+      let nIdx = maybeRead idx :: Maybe Int
       updatePriority (todoTxtPath cfg) nIdx Nothing xs
 
 process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
@@ -333,8 +333,8 @@ process _ ("help":_) = do
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
   putStrLn " list|ls +project @context"
-  putStrLn " del|delete|remove TASKNUM"
-  putStrLn " complete|done TASKNUM"
+  putStrLn " delete|del|remove|rm TASKNUM"
+  putStrLn " complete|done|do TASKNUM"
   putStrLn " completed"
   putStrLn " priority|pri TASKNUM NEWPRIORITY"
   putStrLn " version"
@@ -357,23 +357,24 @@ process _ ("version":_) = do
 -- Aliases
 process cfg ("remove":idx:[]) = process cfg ("delete":idx:[])
 process cfg ("del":idx:[]) = process cfg ("delete":idx:[])
+process cfg ("rm":idx:[]) = process cfg ("delete":idx:[])
 process cfg ("done":idx:[]) = process cfg ("complete":idx:[])
+process cfg ("do":idx:[]) = process cfg ("complete":idx:[])
 process cfg ("ls":rest) = process cfg ("list":rest)
 process cfg ("pri":rest) = process cfg ("priority":rest)
 process cfg _ = process cfg ("help":[])
 
-updatePriority :: FilePath -> Int -> Maybe Priority -> [Tasks.Task] -> IO ()
+updatePriority :: FilePath -> Maybe Int -> Maybe Priority -> [Tasks.Task] -> IO ()
 updatePriority path nIdx mPri xs = do
   let xss = numberify $ sort $ onlyPending xs
   let completed = onlyCompleted xs
-  if (length xs >= nIdx) && (nIdx > 0)
+  if (isJust nIdx) && (length xs >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
   then do
-    let nonMatch = denumbrify $ filter (\(n,_) -> n /= nIdx) xss
-    let matches = denumbrify $ filter (\(n,_) -> n == nIdx) xss
+    let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+    let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
     let updated = map (\(Incomplete _ d sx) ->
                           Incomplete mPri d sx) matches
     writeTodoTxt path (nonMatch ++ updated ++ completed)
     putStrLn "Updated Priority"
   else do
-    error "Invalid Index"
-
+    error "Invalid Index: priority index [priority]"

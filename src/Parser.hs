@@ -12,6 +12,7 @@ module Parser
     , incompleteTask
     , completedTask
     , task
+    , tasks
     , Parser.ParseError
     , parseLines
     , validateLine
@@ -192,10 +193,15 @@ task = do
   t <- choice [ completedTask, incompleteTask ]
   return t
 
+tasks :: Parser [Tasks.Task]
+tasks = do
+  tx <- option [] $ try $ many task
+  return tx
+
 -- |Parses entire lines. This call includes the string for the file path which
 -- is used in the error message.
 parseLines :: String -> String -> Either Parser.ParseError [Tasks.Task]
-parseLines path lines = parse (many task) path (pack lines)
+parseLines path lines = parse tasks path (pack lines)
 
 -- |Validates a single line. This is used to check if the string passed for
 -- creating a new task is valid.

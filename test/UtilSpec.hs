@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module UtilSpec where
 
-import Util (subsetOf, MonadDate(..), getToday)
+import Util (subsetOf, MonadDate(..), getToday, maybeRead)
 
 import Data.Functor.Identity
 import Data.Time (fromGregorian, toGregorian)
@@ -60,3 +60,11 @@ spec =
         let result = toGregorian today
         result `shouldBe` (2017, 3, 13)
 
+    describe "maybeRead" $ do
+      it "Returns Just 1 for \"1\" as type Int" $ do
+        let result = (maybeRead "1") :: Maybe Int
+        result `shouldBe` (Just 1)
+
+      it "Returns Nothing for \"a\" as type Int" $ do
+        let result = (maybeRead "a") :: Maybe Int
+        result `shouldBe` Nothing

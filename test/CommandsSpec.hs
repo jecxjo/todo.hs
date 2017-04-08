@@ -72,7 +72,7 @@ spec =
         it "does not append an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index: append index \"text to append\"")
 
     describe "Prepend action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -141,7 +141,7 @@ spec =
         it "does not complete an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "complete 3") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "complete 3") `shouldThrow` (== ErrorCall "Invalid Index: complete index")
 
     describe "Delete action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -160,7 +160,7 @@ spec =
         it "does not delete an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index: delete index")
 
     describe "Priority action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -181,11 +181,11 @@ spec =
 
         it "fails on invalid index" $ do
           process cfg (words "add (A) Task 1")
-          process cfg (words "priority 2 B") `shouldThrow` (== ErrorCall "Invalid Index")
+          process cfg (words "priority 2 B") `shouldThrow` (== ErrorCall "Invalid Index: priority index [priority]")
 
         it "fails on invalid priority" $ do
           process cfg (words "add (A) Task 1")
-          process cfg (words "priority 1 5") `shouldThrow` (== ErrorCall "Invalid Priority")
+          process cfg (words "priority 1 5") `shouldThrow` (== ErrorCall "Invalid Priority: Valid values A-Z or left blank for no priority")
 
         it "allows lower case priority" $ do
           process cfg (words "add Task 1")

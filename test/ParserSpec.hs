@@ -150,3 +150,18 @@ spec =
         it "Matches Full Complete Task" $ do
           parse Parser.task "" "x 2017-03-01 (A) 2017-02-01 Basic task @Context and +Project"
             `shouldBe` Right c4
+
+      describe "Tasks" $ do
+        it "Empty string returns empty list" $ do
+          parse Parser.tasks "" "" `shouldBe` Right []
+
+        it "Multiple newline string returns empty list" $ do
+          parse Parser.tasks "" "\n\n\n" `shouldBe` Right []
+
+        it "Multiple valid lines" $ do
+          parse Parser.tasks "" "Basic task @Context and +Project\n2017-02-01 Basic task @Context and +Project"
+            `shouldBe` Right [i1,i2]
+
+        it "Multiple valid lines with newlines interlaced" $ do
+          parse Parser.tasks "" "\n\n\n\nBasic task @Context and +Project\n\n\n2017-02-01 Basic task @Context and +Project\n\n\n"
+            `shouldBe` Right [i1,i2]
