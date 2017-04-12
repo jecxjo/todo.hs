@@ -142,7 +142,8 @@ process cfg ("-s":rest) = do
 -- Command Line: list "string to match" +Project @Context
 process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
   where
-    filterFn (_, t) = foldl (\b s -> b && (isInfixOf s (show t))) True filters
+    isInfixOfUpper s t = isInfixOf (map toUpper s) (map toUpper t)
+    filterFn (_, t) = foldl (\b s -> b && (isInfixOfUpper s (show t))) True filters
     listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
                                               . numberify
                                               . sort

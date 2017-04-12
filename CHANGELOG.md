@@ -3,6 +3,10 @@ All notable changes to thsi project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## Unversioned
+## Changed
+- List command now case insensitive
+
 ## [0.1.0] - 2017-04-08
 ### Added
 - Prepend and Replace commands
