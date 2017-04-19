@@ -183,19 +183,26 @@ convertToDate str = do
       "today" -> return $ genDate $ toGregorian $ today
       "tomorrow" -> return $ genDate $ toGregorian $ addDays 1 $ today
       "yesterday" -> return $ genDate $ toGregorian $ addDays (-1) $ today
-      _       -> if dateNum <= wday
-                 then do
-                    return $ genDate $ toGregorian $ addDays 7 $ fromWeekDate yr wk dateNum
-                 else do
-                    return $ genDate $ toGregorian $ fromWeekDate yr wk dateNum
+      _ -> if dateNum <= wday
+           then do
+              return $ genDate $ toGregorian $ addDays 7 $ fromWeekDate yr wk dateNum
+           else do
+              return $ genDate $ toGregorian $ fromWeekDate yr wk dateNum
   where
     toNum "monday" = 1
+    toNum "mon" = 1
     toNum "tuesday" = 2
+    toNum "tue" = 2
     toNum "wednesday" = 3
+    toNum "wed" = 3
     toNum "thursday" = 4
+    toNum "thu" = 4
     toNum "friday" = 5
+    toNum "fri" = 5
     toNum "saturday" = 6
+    toNum "sat" = 6
     toNum "sunday" = 7
+    toNum "sun" = 7
     toNum _ = error "Bad Due Date"
     genDate (y,m,d) = Date y m d
 

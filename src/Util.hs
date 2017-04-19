@@ -5,8 +5,6 @@ module Util
     (
       subsetOf
     , removeIfExists
-    , ShowIO
-    , showIO
     , MonadDate(..)
     , getToday
     , maybeRead
@@ -31,16 +29,7 @@ removeIfExists fileName = removeFile fileName `catch` handleExists
           | isDoesNotExistError e = return ()
           | otherwise = throwIO e
 
--- |A class for showing IO a types
-class ShowIO a where
-  showIO :: a -> IO String
-
-instance Show a => ShowIO a where
-  showIO = return . show
-
-instance ShowIO a => ShowIO (IORef a) where
-  showIO a = readIORef a >>= showIO
-
+-- |A class for handling Dates, allowing testing to not rely on IO ()
 class Monad m => MonadDate m where
   getDay :: m Day
 

@@ -13,9 +13,9 @@ import Data.Maybe (isJust, fromJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import Data.Time.Calendar (Day(..))
 import System.Directory (getHomeDirectory)
-import System.FilePath (joinPath)
+import System.FilePath (joinPath, replaceFileName)
 
-import FileHandler (readTodoTxt, writeTodoTxt)
+import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt)
 import Parser (validateLine)
 import Tasks ( Task(..)
              , Date(..)
@@ -39,8 +39,16 @@ instance MonadDate IO where
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
+                                 , archiveTxtPath :: Maybe FilePath
                                  , timeStamp :: Maybe Date
                                  }
+
+-- |Defaults
+defaultTodoName :: String
+defaultTodoName = "todo.txt"
+
+defaultArchiveName :: String
+defaultArchiveName = "done.txt"
 
 -- |Turn an array into a numbered array
 numberify :: [a] -> [(Int, a)]
@@ -59,7 +67,13 @@ printTuple (n, t) = putStrLn $ show n ++ ": " ++ show t
 todoFilePath :: IO FilePath
 todoFilePath = do
   home <- getHomeDirectory
-  return $ joinPath [ home, "todo.txt" ]
+  return $ joinPath [ home, defaultTodoName ]
+
+-- |Extracts the archive file path for archive.txt
+getArchivePath :: ConfigOption -> FilePath
+getArchivePath cfg = case archiveTxtPath cfg of
+                      Nothing -> replaceFileName (todoTxtPath cfg) defaultArchiveName
+                      Just path -> path
 
 -- |Filter tasks based on Projects.
 -- Expects to be in a numbered tuple.
@@ -106,7 +120,7 @@ sortTupleDueDate = sortBy sortFn
 processArgs :: [String] -> IO ()
 processArgs args = do
   path <- todoFilePath
-  process (ConfigOption path Nothing) args
+  process (ConfigOption path Nothing Nothing) args
 
 -- |Reads the file, print error or calls a function to handle the list of todo
 -- items.
@@ -131,6 +145,9 @@ process cfg [] = process' (todoTxtPath cfg) listAll
 
 -- |Flag for passing in the location of the todo.txt file
 process cfg ("-t":path:rest) = process (cfg { todoTxtPath = path }) rest
+
+-- |Flag for passing in the location of the archive.txt file
+process cfg ("-a":path:rest) = process (cfg { archiveTxtPath = Just path }) rest
 
 -- |Flag to auto start date all tasks
 process cfg ("-s":rest) = do
@@ -323,12 +340,24 @@ process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
              . sort
              . onlyPending
 
+process cfg ("archive":[]) = process' (todoTxtPath cfg) archiveSome
+  where
+    archiveSome lst = do
+      let iTasks = onlyPending lst
+      let cTasks = onlyCompleted lst
+      let archPath = getArchivePath cfg
+      appendTodoTxt archPath cTasks
+      writeTodoTxt (todoTxtPath cfg) iTasks
+      putStrLn "Completed Tasks Archived"
+
+
 -- |Help output
 -- Command Line: help
 process _ ("help":_) = do
   putStrLn "Usage: todo [-t path] [-s] action [task_number] [task_description]"
   putStrLn "Flags:"
-  putStrLn " -t path    Points to todo.txt, default is $HOME/todo.txt"
+  putStrLn $ " -t path    Points to todo.txt, default is $HOME/" ++ defaultTodoName
+  putStrLn $ " -a path    Points to archive file, default is $HOME/" ++ defaultArchiveName
   putStrLn " -s         Auto timestamp new tasks"
   putStrLn ""
   putStrLn "Actions:"
@@ -343,6 +372,7 @@ process _ ("help":_) = do
   putStrLn " prepend TASKNUM \"prepend to task\""
   putStrLn " replace TASKNUM \"text to replace\""
   putStrLn " due"
+  putStrLn " archive"
   putStrLn " help"
   putStrLn ""
   putStrLn "Key Value Supported:"

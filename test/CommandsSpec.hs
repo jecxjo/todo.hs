@@ -5,8 +5,9 @@ import Tasks (Date(..))
 import Util (removeIfExists)
 
 import Control.Exception (ErrorCall(..))
+import Data.Maybe (fromJust)
 import System.Directory (doesFileExist)
-import System.FilePath (joinPath)
+import System.FilePath (joinPath, replaceFileName)
 import Test.Hspec ( Spec
                   , describe
                   , it
@@ -33,6 +34,7 @@ spec :: Spec
 spec =
   describe "Processing command line arguments" $ do
     let cfg = ConfigOption { todoTxtPath = joinPath [".", "todo-testing.txt"]
+                           , archiveTxtPath = Just $ joinPath [".", "archive-testing.txt"]
                            , timeStamp = Nothing }
 
     describe "Add action" $ do
@@ -215,4 +217,39 @@ spec =
           process cfg (words "add Task 3")
           process cfg (words "append 2 foo")
           getTodoFile (todoTxtPath cfg) >>= (`shouldBe` "Task 1\nTask 3\nTask 2 foo")
-        
+
+    describe "Archives completed tasks" $ do
+      let iPath = todoTxtPath cfg
+      let cPath = archiveTxtPath cfg
+      before_ (removeIfExists iPath) $ do
+        before_ (removeIfExists $ fromJust cPath) $ do
+          it "removes completed" $ do
+            process cfg (words "add Task 1")
+            process cfg (words "add Task 2")
+            process cfg (words "add Task 3")
+            process cfg (words "add Task 4")
+            process cfg (words "complete 2")
+            process cfg (words "complete 3")
+            process cfg (words "archive")
+            getTodoFile iPath >>= (`shouldBe` "Task 1\nTask 3")
+
+          it "archives completed" $ do
+            process cfg (words "add Task 1")
+            process cfg (words "add Task 2")
+            process cfg (words "add Task 3")
+            process cfg (words "add Task 4")
+            process cfg (words "complete 2")
+            process cfg (words "complete 3")
+            process cfg (words "archive")
+            getTodoFile (fromJust cPath) >>= (`shouldSatisfy` (\x -> x =~ ("^x [0-9]{4}-[0-9]{2}-[0-9]{2} Task 4\\\nx [0-9]{4}-[0-9]{2}-[0-9]{2} Task 2") :: Bool))
+
+          it "archives appends completed" $ do
+            process cfg (words "add Task 1")
+            process cfg (words "add Task 2")
+            process cfg (words "add Task 3")
+            process cfg (words "add Task 4")
+            process cfg (words "complete 2")
+            process cfg (words "archive")
+            process cfg (words "complete 3")
+            process cfg (words "archive")
+            getTodoFile (fromJust cPath) >>= (`shouldSatisfy` (\x -> x =~ ("^x [0-9]{4}-[0-9]{2}-[0-9]{2} Task 2\\\nx [0-9]{4}-[0-9]{2}-[0-9]{2} Task 4") :: Bool))

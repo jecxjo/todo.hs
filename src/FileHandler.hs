@@ -1,6 +1,7 @@
 module FileHandler
     (
       writeTodoTxt
+    , appendTodoTxt
     , readTodoTxt
     ) where
 
@@ -17,6 +18,18 @@ writeTodoTxt path tx = do
     writeFile path str
   where str = intercalate "\n" $ map show tx
 
+-- |Append to todo.txt file
+appendTodoTxt :: FilePath -> [Task] -> IO ()
+appendTodoTxt path tx = do
+  exists <- doesFileExist path
+  if exists
+  then do
+    oldComplete <- readTodoTxt path
+    case oldComplete of
+      Right oldTx -> writeFile path $ intercalate "\n" $ map show $ oldTx ++ tx
+  else
+    writeFile path $ intercalate "\n" $ map show tx
+
 -- |Read from todo.txt
 -- If no file exists then one is created.
 readTodoTxt :: FilePath -> IO (Either ParseError [Task])
@@ -30,12 +43,3 @@ readTodoTxt path = do
       writeTodoTxt path []
       lines <- readFile path
       return $ parseLines path lines
-
-
--- |Write report file
-writeReport :: FilePath -> Integer -> Integer -> IO ()
-writeReport path incomplete complete = do
-    appendFile reportFile str
-  where
-   str = "DATETIME " ++ show incomplete ++ " " ++ show complete
-   reportFile = replaceFileName path $ "report" ++ takeExtension path
