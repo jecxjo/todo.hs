@@ -15,7 +15,7 @@ import Data.Time.Calendar (Day(..))
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath, replaceFileName)
 
-import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt)
+import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt, writeReportTxt)
 import Parser (validateLine)
 import Tasks ( Task(..)
              , Date(..)
@@ -40,6 +40,7 @@ instance MonadDate IO where
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
                                  , archiveTxtPath :: Maybe FilePath
+                                 , reportTxtPath :: Maybe FilePath
                                  , timeStamp :: Maybe Date
                                  }
 
@@ -49,6 +50,9 @@ defaultTodoName = "todo.txt"
 
 defaultArchiveName :: String
 defaultArchiveName = "done.txt"
+
+defaultReportName :: String
+defaultReportName = "report.txt"
 
 -- |Turn an array into a numbered array
 numberify :: [a] -> [(Int, a)]
@@ -73,6 +77,12 @@ todoFilePath = do
 getArchivePath :: ConfigOption -> FilePath
 getArchivePath cfg = case archiveTxtPath cfg of
                       Nothing -> replaceFileName (todoTxtPath cfg) defaultArchiveName
+                      Just path -> path
+
+-- |Extracts the report file path for report.txt
+getReportPath :: ConfigOption -> FilePath
+getReportPath cfg = case reportTxtPath cfg of
+                      Nothing -> replaceFileName (todoTxtPath cfg) defaultReportName
                       Just path -> path
 
 -- |Filter tasks based on Projects.
@@ -120,7 +130,7 @@ sortTupleDueDate = sortBy sortFn
 processArgs :: [String] -> IO ()
 processArgs args = do
   path <- todoFilePath
-  process (ConfigOption path Nothing Nothing) args
+  process (ConfigOption path Nothing Nothing Nothing) args
 
 -- |Reads the file, print error or calls a function to handle the list of todo
 -- items.
@@ -154,6 +164,9 @@ process cfg ("-s":rest) = do
   c <- getCurrentTime
   let (y, m, d) = toGregorian $ utctDay c
   process (cfg { timeStamp = Just (Date y m d) }) rest
+
+-- |Flag for passing in the location of report.txt file
+process cfg ("-r":path:rest) = process (cfg { reportTxtPath = Just path }) rest
 
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
@@ -350,6 +363,17 @@ process cfg ("archive":[]) = process' (todoTxtPath cfg) archiveSome
       writeTodoTxt (todoTxtPath cfg) iTasks
       putStrLn "Completed Tasks Archived"
 
+process cfg ("report":[]) = process' (todoTxtPath cfg) reportSome
+  where
+    reportSome lst = do
+      process cfg ["archive"] -- Do Archive first
+      let iTasksLen = length $ onlyPending lst
+      let archPath = getArchivePath cfg
+      process' archPath (\archLst -> do
+        let cTasksLen = length archLst
+        let reportPath = getReportPath cfg
+        writeReportTxt reportPath iTasksLen cTasksLen
+        putStrLn $ "Report Created: " ++ show iTasksLen ++ " " ++ show cTasksLen)
 
 -- |Help output
 -- Command Line: help
@@ -359,6 +383,7 @@ process _ ("help":_) = do
   putStrLn $ " -t path    Points to todo.txt, default is $HOME/" ++ defaultTodoName
   putStrLn $ " -a path    Points to archive file, default is $HOME/" ++ defaultArchiveName
   putStrLn " -s         Auto timestamp new tasks"
+  putStrLn $ " -r path    Points to report file, default is $HOME/" ++ defaultReportName
   putStrLn ""
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""

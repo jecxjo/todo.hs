@@ -3,9 +3,12 @@ module FileHandler
       writeTodoTxt
     , appendTodoTxt
     , readTodoTxt
+    , writeReportTxt
     ) where
 
 import Data.List (intercalate)
+import Data.Time (getCurrentTime, toGregorian, utctDay)
+import Data.Time.LocalTime (localTimeOfDay, utcToLocalTime, getCurrentTimeZone, TimeOfDay(..))
 import System.Directory (doesFileExist)
 import System.FilePath (replaceFileName, takeExtension)
 
@@ -43,3 +46,31 @@ readTodoTxt path = do
       writeTodoTxt path []
       lines <- readFile path
       return $ parseLines path lines
+
+-- |Writes to report.txt
+writeReportTxt :: FilePath -> Int -> Int -> IO ()
+writeReportTxt path incomp comp = do
+    c <- getCurrentTime
+    timezone <- getCurrentTimeZone
+    let (y,m,d) = toGregorian $ utctDay c
+    let (TimeOfDay hour minute second) = localTimeOfDay $ utcToLocalTime timezone c
+    let str = showFour y ++ "-" ++ showTwo m ++ "-" ++ showTwo d ++ "T"
+              ++ showTwo hour ++ ":" ++ showTwo minute ++ ":" ++ (showTwo $ truncate second)
+              ++ " " ++ show incomp ++ " " ++ show comp
+    exists <- doesFileExist path
+    if exists
+    then do
+      appendFile path $ "\n" ++ str
+    else
+      writeFile path str
+  where
+    showTwo i = if i < 10
+                then
+                  "0" ++ show i
+                else
+                  show i
+    showFour i
+      | i < 10 = "000" ++ show i
+      | i < 100 = "00" ++ show i
+      | i < 1000 = "0" ++ show i
+      | otherwise = show i
