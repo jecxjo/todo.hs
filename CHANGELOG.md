@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Added
 - Due day abbriviations supported
 - Added archive command
+- Added report command
 
 ## Changed
 - List command now case insensitive
