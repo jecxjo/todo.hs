@@ -110,6 +110,7 @@ just deletes the entry.
     x 2017-04-27 Example Task
 
 **Report**
+
     $ todo
     1: Example Task
     2: Another Task
