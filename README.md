@@ -4,7 +4,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.1.0)
+## Supported Features (0.2.0)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
 priority.
@@ -97,10 +97,34 @@ just deletes the entry.
     $ todo
     1: Example Task
 
+**Archive**
+
+    $ todo
+    1: Example Task
+    $ todo complete 1
+    Task Completed
+    $ todo archive
+    Completed Tasks Archived
+    $ cat $HOME/todo.txt
+    $ cat $HOME/done.txt
+    x 2017-04-27 Example Task
+
+**Report**
+    $ todo
+    1: Example Task
+    2: Another Task
+    $ todo complete 1
+    Task Completed
+    $ todo report
+    Completed Tasks Archived
+    Report Created: 1 1
+    $ cat $HOME/report.txt
+    2017-04-27T13:40:35 1 1
+
+
 ## Future features
 
 - Colored output
-- Reports
 - Regex based edits
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
