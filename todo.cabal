@@ -1,5 +1,5 @@
 name:                todo
-version:             0.1.0.2
+version:             0.2.0.0
 -- synopsis:
 -- description:
 homepage:            https://github.com/jecxjo/todo.hs#readme
@@ -28,6 +28,7 @@ library
                      , filepath
                      , time
                      , transformers
+                     , mtl
   default-language:    Haskell2010
 
 executable todo-exe
@@ -51,6 +52,7 @@ test-suite todo-test
                      , filepath
                      , regex-posix
                      , time
+                     , mtl
   ghc-options:         -Wall
   default-language:    Haskell2010
 

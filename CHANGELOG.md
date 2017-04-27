@@ -3,7 +3,7 @@ All notable changes to thsi project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## Unversioned
+## [0.2.0] - 2017-04-26
 ## Added
 - Due day abbriviations supported
 - Added archive command
