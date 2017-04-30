@@ -11,12 +11,11 @@ module Util
     ) where
 
 import Control.Exception
-import Data.IORef
 import Data.Maybe (listToMaybe)
+import Data.Time (getCurrentTime, utctDay)
 import Data.Time.Calendar (Day(..))
-import Prelude hiding (catch)
 import System.Directory
-import System.IO.Error hiding (catch)
+import System.IO.Error
 
 -- |subsetOf filters a list that contains a set of elements
 subsetOf :: (Eq a, Foldable t) => [a] -> t a -> Bool
@@ -38,13 +37,10 @@ getToday = do
   d <- getDay
   return d
 
--- | Filter and Modify
-filterModify :: (a -> Bool) -> (a -> b) -> [a] -> [b]
-filterModify _ _ [] = []
-filterModify f g [x] = if (f x) then [g x] else []
-filterModify f g (x:xs) = if (f x)
-                          then [g x] ++ filterModify f g xs
-                          else filterModify f g xs
+instance MonadDate IO where
+  getDay = do
+    c <- getCurrentTime
+    return $ utctDay c
 
 -- |MaybeRead is like Read but instead of exception returns Nothing
 maybeRead :: Read a => String -> Maybe a

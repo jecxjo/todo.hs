@@ -1,13 +1,12 @@
 module CommandsSpec where
 
 import Commands (process, ConfigOption(..))
-import Tasks (Date(..))
 import Util (removeIfExists)
 
 import Control.Exception (ErrorCall(..))
 import Data.Maybe (fromJust)
 import System.Directory (doesFileExist)
-import System.FilePath (joinPath, replaceFileName)
+import System.FilePath (joinPath)
 import Test.Hspec ( Spec
                   , describe
                   , it

@@ -26,19 +26,15 @@ import Text.Parsec.Char ( char
                         , letter
                         , alphaNum
                         , digit
-                        , anyChar
                         , noneOf
                         , endOfLine
                         , string)
 import Text.Parsec.Combinator ( many1
                               , optionMaybe
                               , choice
-                              , option
-                              , eof
-                              , optional
-                              , sepBy)
+                              , option)
 import Text.Parsec.Error as E
-import Text.Parsec.Prim (parse, try, (<|>), parseTest)
+import Text.Parsec.Prim (parse, try)
 import Text.Parsec.Text
 
 import qualified Tasks as Tasks
@@ -56,9 +52,9 @@ whiteSpace = () <$ many (char ' ')
 -- |Priority: (A)
 priority :: Parser Tasks.Priority
 priority = do
-  char '('
+  _ <- char '('
   p <- letter
-  char ')'
+  _ <- char ')'
   return $ toUpper p
 
 -- |Date: 2017-02-23
@@ -66,9 +62,9 @@ priority = do
 date :: Parser Tasks.Date
 date = do
     year <- twoToFourDigits
-    char '-'
+    _ <- char '-'
     month <- oneToTwoDigits
-    char '-'
+    _ <- char '-'
     day <- oneToTwoDigits
     return $ Tasks.Date (convertYear $ read year) (read month) (read day)
   where oneToTwoDigits = do
@@ -88,10 +84,10 @@ date = do
 -- |Project: +ProjectName +Project.SubProject +Project-Sub-SubSub
 project :: Parser Tasks.StringTypes
 project = do
-    char '+'
+    _ <- char '+'
     c <- alphaNum
     s <- many alphaNumDashDot
-    whiteSpace
+    _ <- whiteSpace
     return $ Tasks.SProject ([c] ++ s)
   where
     alphaNumDashDot = choice [alphaNum, oneOf "-."]
@@ -99,10 +95,10 @@ project = do
 -- |Context: @ContextString
 context :: Parser Tasks.StringTypes
 context = do
-    char '@'
+    _ <- char '@'
     c <- alphaNum
     s <- many alphaNumDashDotPlusAmp
-    whiteSpace
+    _ <- whiteSpace
     return $ Tasks.SContext ([c] ++ s)
   where
     alphaNumDashDotPlusAmp = choice [alphaNum, oneOf "-.@+"]
@@ -111,16 +107,16 @@ context = do
 kvstring :: Parser Tasks.StringTypes
 kvstring = try $ do
   key <- many1 alphaNum
-  char ':'
+  _ <- char ':'
   value <- many1 alphaNum
-  whiteSpace
+  _ <- whiteSpace
   return $ Tasks.SKeyValue $ Tasks.KVString key value
 
 kvduedate :: Parser Tasks.StringTypes
 kvduedate = try $ do
-  string "due:"
+  _ <- string "due:"
   d <- date
-  whiteSpace
+  _ <- whiteSpace
   return $ Tasks.SKeyValue $ Tasks.KVDueDate d
 
 keyvalue :: Parser Tasks.StringTypes
@@ -131,7 +127,7 @@ keyvalue = choice [ kvduedate, kvstring ]
 other :: Parser Tasks.StringTypes
 other = do
   cx <- many1 $ noneOf "\n "
-  whiteSpace
+  _ <- whiteSpace
   return $ Tasks.SOther cx
 
 -- |Parse all string types
@@ -161,11 +157,11 @@ lots = do
 incompleteTask :: Parser Tasks.Task
 incompleteTask = do
   pri <- optionMaybe priority
-  whiteSpace
+  _ <- whiteSpace
   startDate <- optionMaybe date
-  whiteSpace
+  _ <- whiteSpace
   rest <- lots
-  many endOfLine
+  _ <- many endOfLine
   return $ Tasks.Incomplete pri startDate rest
 
 -- |Complete Task
@@ -174,12 +170,12 @@ incompleteTask = do
 -- task.
 completedTask :: Parser Tasks.Task
 completedTask = do
-  char 'x'
-  whiteSpace
+  _ <- char 'x'
+  _ <- whiteSpace
   endDate <- date
-  whiteSpace
+  _ <- whiteSpace
   t <- incompleteTask
-  many endOfLine
+  _ <- many endOfLine
   return $ Tasks.Completed endDate t
 
 -- |Either Incomplete or Completed Tasks
@@ -189,7 +185,7 @@ completedTask = do
 -- an Incomplete due to the optional atoms.
 task :: Parser Tasks.Task
 task = do
-  try (many (char '\n'))
+  _ <- try (many (char '\n'))
   t <- choice [ completedTask, incompleteTask ]
   return t
 
@@ -201,7 +197,7 @@ tasks = do
 -- |Parses entire lines. This call includes the string for the file path which
 -- is used in the error message.
 parseLines :: String -> String -> Either Parser.ParseError [Tasks.Task]
-parseLines path lines = parse tasks path (pack lines)
+parseLines path lns = parse tasks path (pack lns)
 
 -- |Validates a single line. This is used to check if the string passed for
 -- creating a new task is valid.

@@ -8,10 +8,9 @@ module Commands
 
 import Control.Monad (forM_, msum)
 import Data.Char (toUpper)
-import Data.List (sort, isPrefixOf, sortBy, find, isInfixOf)
+import Data.List (sort, sortBy, find, isInfixOf)
 import Data.Maybe (isJust, fromJust)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
-import Data.Time.Calendar (Day(..))
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath, replaceFileName)
 
@@ -22,20 +21,11 @@ import Tasks ( Task(..)
              , StringTypes(..)
              , KeyValue(..)
              , Priority
-             , Project
-             , Context
              , onlyPending
              , onlyCompleted
-             , getProjects
-             , getContexts
              , convertStringTypes)
-import Util (subsetOf, MonadDate(..), maybeRead)
+import Util (maybeRead)
 import Version (version)
-
-instance MonadDate IO where
-  getDay = do
-    c <- getCurrentTime
-    return $ utctDay c
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
@@ -85,24 +75,6 @@ getReportPath cfg = case reportTxtPath cfg of
                       Nothing -> replaceFileName (todoTxtPath cfg) defaultReportName
                       Just path -> path
 
--- |Filter tasks based on Projects.
--- Expects to be in a numbered tuple.
-filterTupleProjects :: [Project] -> [(Int, Task)] -> [(Int, Task)]
-filterTupleProjects px = filter projectFilter
-  where
-    projectFilter (_, (Incomplete _ _ sx)) = px `subsetOf` (getProjects sx)
-    projectFilter (_, (Completed _ (Incomplete _ _ sx))) =
-      px `subsetOf` (getProjects sx)
-
--- |Filter tasks based on Context.
--- Expects to be in a numbered tuple.
-filterTupleContexts :: [Context] -> [(Int, Task)] -> [(Int, Task)]
-filterTupleContexts cx = filter contextFilter
-  where
-    contextFilter (_, (Incomplete _ _ sx)) = cx `subsetOf` (getContexts sx)
-    contextFilter (_, (Completed _ (Incomplete _ _ sx))) =
-      cx `subsetOf` (getContexts sx)
-
 -- |Filter tasks based on Due Date.
 -- Expects to be in a numbered tuple.
 filterTupleDueDate :: [(Int, Task)] -> [(Int, Task)]
@@ -112,6 +84,7 @@ filterTupleDueDate = filter containsDueDate
     isDue _ = False
     containsDueDate (_, (Incomplete _ _ sx)) = foldl (||) False $ map isDue sx
     containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = foldl (||) False $ map isDue sx
+    containsDueDate (_, (Completed _ (Completed _ _))) = error "Should never have a Completed Completed"
 
 -- |Sort tuple based on Due Date
 -- Expects to be in a numbered tuple.

@@ -21,10 +21,8 @@ module Tasks
 
 import Util (subsetOf, MonadDate(..), getToday)
 
-import Control.Monad.Trans.Class (lift)
 import Data.Char (toLower)
-import Data.List (find)
-import Data.Time (getCurrentTime, toGregorian, utctDay)
+import Data.Time (toGregorian)
 import Data.Time.Calendar (addDays)
 import Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
 import Data.Traversable (forM)

@@ -4,7 +4,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.2.0)
+## Supported Features (0.2.1)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
 priority.
