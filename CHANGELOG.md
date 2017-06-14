@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unversioned
 
+## [0.3.0] - 2017-06-14
+### Added
+- Regular expression based searches
+- Regular expression based swaps
+
 ## [0.2.1] - 2017-04-30
 ### Changed
 - Fixed Version Numbers

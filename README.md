@@ -4,7 +4,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.2.1)
+## Supported Features (0.3.0)
 
 The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
 priority.
@@ -122,11 +122,48 @@ just deletes the entry.
     $ cat $HOME/report.txt
     2017-04-27T13:40:35 1 1
 
+**NEW: Regular Expression Searches**
+
+    $ todo
+    1: Example Task
+    2: Another Task
+    3: Pick up milk
+    4: Pick mike up from airport
+    $ todo search Task
+    1: Example Task
+    2: Another Task
+    $ todo search "mi(lk|ke)"
+    3: Pick up milk
+    4: Pick mike up from airport
+    $ todo search Task
+
+*Note:* Regular expressions are handled by PCRE so perl regex, not POSIX. 
+
+**NEW: Regular Epxression Swaps**
+
+    $ todo
+    1: Pick mike up from airport
+    $ todo swap "mike up" "up Mike"
+    Updated Task: Pick up Mike from airport
+
+You can even use indexed groups.
+
+    $ todo
+    1: Pick up Mike from airport
+    $ todo swap "(Mike)" "@\1"
+    Updated Task: Pick up @Mike from airport
+
+Or change due dates.
+
+    $ todo
+    1: Pick up milk due:2017-06-14
+    $ todo swap 1 "due:.*" "due:tomorrow"
+    Updated Task: Pick up milk due:2017-06-15
+
 
 ## Future features
 
 - Colored output
-- Regex based edits
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
 [2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types
