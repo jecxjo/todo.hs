@@ -16,6 +16,7 @@ import System.FilePath (joinPath, replaceFileName)
 
 import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt, writeReportTxt)
 import Parser (validateLine)
+import RegEx (matchGen, swapGen, swapAllGen)
 import Tasks ( Task(..)
              , Date(..)
              , StringTypes(..)
@@ -151,6 +152,15 @@ process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
                                               . numberify
                                               . sort
                                               . onlyPending
+
+process cfg ("search":filters) = process' (todoTxtPath cfg) searchSome
+  where
+    matchFn = matchGen $ unwords filters
+    filterFn (_, t) = matchFn $ show t
+    searchSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
+                                                . numberify
+                                                . sort
+                                                . onlyPending
 
 -- |Add task to list
 -- Command Line: add Example Task for +Project with @Context
@@ -361,6 +371,7 @@ process _ ("help":_) = do
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
   putStrLn " list|ls +project @context"
+  putStrLn " search \"regular expression\""
   putStrLn " delete|del|remove|rm TASKNUM"
   putStrLn " complete|done|do TASKNUM"
   putStrLn " completed"
