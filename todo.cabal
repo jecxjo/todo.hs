@@ -21,6 +21,7 @@ library
                      , FileHandler
                      , Commands
                      , Version
+                     , RegEx
   build-depends:       base >= 4.7 && < 5
                      , parsec
                      , text
@@ -28,6 +29,7 @@ library
                      , filepath
                      , time
                      , transformers
+                     , regex-pcre-builtin
   default-language:    Haskell2010
 
 executable todo

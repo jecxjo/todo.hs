@@ -16,6 +16,7 @@ import System.FilePath (joinPath, replaceFileName)
 
 import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt, writeReportTxt)
 import Parser (validateLine)
+import RegEx (matchGen, swapGen, swapAllGen)
 import Tasks ( Task(..)
              , Date(..)
              , StringTypes(..)
@@ -151,6 +152,28 @@ process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
                                               . numberify
                                               . sort
                                               . onlyPending
+
+-- |search for tasks matching regex
+process cfg ("search":filters) = process' (todoTxtPath cfg) searchSome
+  where
+    matchFn = matchGen $ unwords filters
+    filterFn (_, t) = matchFn $ show t
+    searchSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
+                                                . numberify
+                                                . sort
+                                                . onlyPending
+
+-- |search completed tasks matching regex
+-- Command Line: searchcompleted "foo"
+process cfg ("searchcompleted":filters) = process' (todoTxtPath cfg) someCompleted
+  where
+    matchFn = matchGen $ unwords filters
+    filterFn (_, t) = matchFn $ show t
+    someCompleted = (\xss -> forM_ xss printTuple) . (filter filterFn)
+                                                   . numberify
+                                                   . sort
+                                                   . onlyCompleted
+
 
 -- |Add task to list
 -- Command Line: add Example Task for +Project with @Context
@@ -297,6 +320,35 @@ process cfg ("replace":idx:rest) = process' (todoTxtPath cfg) replaceIdx
       else do
         error "Invalid Index: replace index \"text to replace\""
 
+-- |Does a Regex find and swap with text
+-- Command Line: swap 1 "old text" "new text"
+process cfg ("swap":idx:oldText:newText:[]) = process' (todoTxtPath cfg) swapIdx
+  where
+    swapFn = swapGen oldText newText
+    swapIdx xs = do
+      let nIdx = maybeRead idx :: Maybe Int
+      let xss = numberify $ sort $ onlyPending xs
+      let completed = onlyCompleted xs
+      if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
+      then do
+        let nonMatch = denumbrify $ filter (\(n,_) -> n /= (fromJust nIdx)) xss
+        let matches = denumbrify $ filter (\(n,_) -> n == (fromJust nIdx)) xss
+        case matches of
+          [m] -> do
+            case validateLine (swapFn $ show m) of
+              Left e -> error $ show e
+              Right updated -> do
+                let Incomplete pri dt sx = updated
+                let Incomplete pri' dt' _ = m
+                let dt'' = timeStamp cfg
+                sx' <- convertStringTypes sx
+                let updated' = Incomplete (msum [pri, pri']) (msum [dt,dt',dt'']) sx'
+                writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
+                putStrLn $ "Updated Task: " ++ show updated'
+          _ -> do error "Error in replace"
+      else do
+        error "Invalid Index: swap index \"old text\" \"new text\""
+
 -- |Modifies the priority of a previously existing task
 -- Command Line: priorty 1 B
 process cfg ("priority":idx:priority:[]) = process' (todoTxtPath cfg) go
@@ -336,6 +388,24 @@ process cfg ("archive":[]) = process' (todoTxtPath cfg) archiveSome
       writeTodoTxt (todoTxtPath cfg) iTasks
       putStrLn "Completed Tasks Archived"
 
+process cfg ("searcharchived":filters) = process' (todoTxtPath cfg) searcharchived
+  where
+    matchFn = matchGen $ unwords filters
+    filterFn (_, t) = matchFn $ show t
+    someCompleted = (\xss -> forM_ xss printTuple) . (filter filterFn)
+                                                   . numberify
+                                                   . sort
+                                                   . onlyCompleted
+    searcharchived _ = do
+      let archPath = getArchivePath cfg
+      let 
+      todo <- readTodoTxt archPath
+      case todo of
+        Left e -> error (show e)
+        Right xs -> do
+          someCompleted xs
+
+
 process cfg ("report":[]) = process' (todoTxtPath cfg) reportSome
   where
     reportSome lst = do
@@ -361,16 +431,20 @@ process _ ("help":_) = do
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
   putStrLn " list|ls +project @context"
+  putStrLn " search \"regular expression\""
   putStrLn " delete|del|remove|rm TASKNUM"
   putStrLn " complete|done|do TASKNUM"
   putStrLn " completed"
+  putStrLn " searchcompleted|sc \"regular expression\""
   putStrLn " priority|pri TASKNUM NEWPRIORITY"
   putStrLn " version"
   putStrLn " append TASKNUM \"addition to task\""
   putStrLn " prepend TASKNUM \"prepend to task\""
   putStrLn " replace TASKNUM \"text to replace\""
+  putStrLn " swap TASKNUM \"regular expression\" \"replacement string\""
   putStrLn " due"
   putStrLn " archive"
+  putStrLn " searcharchived|sa \"regular expression\""
   putStrLn " help"
   putStrLn ""
   putStrLn "Key Value Supported:"
@@ -391,6 +465,8 @@ process cfg ("done":idx:[]) = process cfg ("complete":idx:[])
 process cfg ("do":idx:[]) = process cfg ("complete":idx:[])
 process cfg ("ls":rest) = process cfg ("list":rest)
 process cfg ("pri":rest) = process cfg ("priority":rest)
+process cfg ("sc":rest) = process cfg ("searchcompleted":rest)
+process cfg ("sa":rest) = process cfg ("searcharchived":rest)
 process cfg _ = process cfg ("help":[])
 
 updatePriority :: FilePath -> Maybe Int -> Maybe Priority -> [Tasks.Task] -> IO ()
