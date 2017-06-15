@@ -178,14 +178,14 @@ convertToDate str = do
     today <- getToday
     let (yr,wk,wday) = toWeekDate $ today
     case dateStr of
-      "today" -> return $ genDate $ toGregorian $ today
-      "tomorrow" -> return $ genDate $ toGregorian $ addDays 1 $ today
-      "yesterday" -> return $ genDate $ toGregorian $ addDays (-1) $ today
+      "today" -> (return . genDate) $ toGregorian today
+      "tomorrow" -> (return . genDate . toGregorian) $ addDays 1 today
+      "yesterday" -> (return . genDate . toGregorian) $ addDays (-1) today
       _ -> if dateNum <= wday
            then do
-              return $ genDate $ toGregorian $ addDays 7 $ fromWeekDate yr wk dateNum
+              (return . genDate . toGregorian . addDays 7) $ fromWeekDate yr wk dateNum
            else do
-              return $ genDate $ toGregorian $ fromWeekDate yr wk dateNum
+              (return . genDate . toGregorian) $ fromWeekDate yr wk dateNum
   where
     toNum "monday" = 1
     toNum "mon" = 1

@@ -28,10 +28,10 @@ appendTodoTxt path tx = do
   then do
     oldComplete <- readTodoTxt path
     case oldComplete of
-      Right oldTx -> writeFile path $ intercalate "\n" $ map show $ oldTx ++ tx
+      Right oldTx -> (writeFile path . intercalate "\n") . map show $ (oldTx ++ tx)
       Left err -> putStrLn $ "Error: " ++ show err
   else
-    writeFile path $ intercalate "\n" $ map show tx
+    writeFile path . intercalate "\n" $ map show tx
 
 -- |Read from todo.txt
 -- If no file exists then one is created.

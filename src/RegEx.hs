@@ -9,7 +9,7 @@ import Text.Regex.PCRE
 
 -- |matchGen generates a search function based on a regular expression
 matchGen :: String -> (String -> Bool)
-matchGen "" = (\_ -> True)
+matchGen "" = const True
 matchGen re = \input -> input =~ re
 
 -- |swapGen: re -> replace -> (oldStr -> newStr)

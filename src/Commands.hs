@@ -7,9 +7,9 @@ module Commands
     ) where
 
 import Control.Monad (forM_, msum)
-import Data.Char (toUpper)
+import Data.Char (toUpper, isAsciiUpper)
 import Data.List (sort, sortBy, find, isInfixOf)
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath, replaceFileName)
@@ -51,7 +51,7 @@ numberify = zipWith (\n t -> (n, t)) [1..]
 
 -- |Turn a number array back into an array
 denumbrify :: [(Int, a)] -> [a]
-denumbrify = map (\(_,a) -> a)
+denumbrify = map snd
 
 -- |Print a numbered array
 printTuple :: (Show a, Show b) => (a, b) -> IO ()
@@ -66,15 +66,13 @@ todoFilePath = do
 
 -- |Extracts the archive file path for archive.txt
 getArchivePath :: ConfigOption -> FilePath
-getArchivePath cfg = case archiveTxtPath cfg of
-                      Nothing -> replaceFileName (todoTxtPath cfg) defaultArchiveName
-                      Just path -> path
+getArchivePath cfg = fromMaybe (replaceFileName (todoTxtPath cfg) defaultArchiveName)
+                      (archiveTxtPath cfg)
 
 -- |Extracts the report file path for report.txt
 getReportPath :: ConfigOption -> FilePath
-getReportPath cfg = case reportTxtPath cfg of
-                      Nothing -> replaceFileName (todoTxtPath cfg) defaultReportName
-                      Just path -> path
+getReportPath cfg = fromMaybe (replaceFileName (todoTxtPath cfg) defaultReportName)
+                      (reportTxtPath cfg)
 
 -- |Filter tasks based on Due Date.
 -- Expects to be in a numbered tuple.
@@ -83,8 +81,8 @@ filterTupleDueDate = filter containsDueDate
   where
     isDue (SKeyValue (KVDueDate _)) = True
     isDue _ = False
-    containsDueDate (_, (Incomplete _ _ sx)) = foldl (||) False $ map isDue sx
-    containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = foldl (||) False $ map isDue sx
+    containsDueDate (_, (Incomplete _ _ sx)) = or $ map isDue sx
+    containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = or $ map isDue sx
     containsDueDate (_, (Completed _ (Completed _ _))) = error "Should never have a Completed Completed"
 
 -- |Sort tuple based on Due Date
@@ -146,7 +144,7 @@ process cfg ("-r":path:rest) = process (cfg { reportTxtPath = Just path }) rest
 -- Command Line: list "string to match" +Project @Context
 process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
   where
-    isInfixOfUpper s t = isInfixOf (map toUpper s) (map toUpper t)
+    isInfixOfUpper s t = map toUpper s `isInfixOf` map toUpper t
     filterFn (_, t) = foldl (\b s -> b && (isInfixOfUpper s (show t))) True filters
     listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
                                               . numberify
@@ -202,7 +200,7 @@ process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
   where
     deleteIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -218,7 +216,7 @@ process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
   where
     completeIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -246,7 +244,7 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
   where
     appendIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -272,7 +270,7 @@ process cfg ("prepend":idx:rest) = process' (todoTxtPath cfg) prependIdx
   where
     prependIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -298,7 +296,7 @@ process cfg ("replace":idx:rest) = process' (todoTxtPath cfg) replaceIdx
   where
     replaceIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -327,7 +325,7 @@ process cfg ("swap":idx:oldText:newText:[]) = process' (todoTxtPath cfg) swapIdx
     swapFn = swapGen oldText newText
     swapIdx xs = do
       let nIdx = maybeRead idx :: Maybe Int
-      let xss = numberify $ sort $ onlyPending xs
+      let xss = numberify . sort $ onlyPending xs
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
@@ -353,7 +351,7 @@ process cfg ("swap":idx:oldText:newText:[]) = process' (todoTxtPath cfg) swapIdx
 -- Command Line: priorty 1 B
 process cfg ("priority":idx:priority:[]) = process' (todoTxtPath cfg) go
   where
-    isPriority char = (char >= 'A' && char <= 'Z')
+    isPriority = isAsciiUpper
     go xs = do
       let nIdx = maybeRead idx :: Maybe Int
       let nPri = toUpper $ head priority
@@ -398,7 +396,6 @@ process cfg ("searcharchived":filters) = process' (todoTxtPath cfg) searcharchiv
                                                    . onlyCompleted
     searcharchived _ = do
       let archPath = getArchivePath cfg
-      let 
       todo <- readTodoTxt archPath
       case todo of
         Left e -> error (show e)
@@ -471,7 +468,7 @@ process cfg _ = process cfg ("help":[])
 
 updatePriority :: FilePath -> Maybe Int -> Maybe Priority -> [Tasks.Task] -> IO ()
 updatePriority path nIdx mPri xs = do
-  let xss = numberify $ sort $ onlyPending xs
+  let xss = numberify . sort $ onlyPending xs
   let completed = onlyCompleted xs
   if (isJust nIdx) && (length xs >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
   then do

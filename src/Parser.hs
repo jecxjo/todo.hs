@@ -110,14 +110,14 @@ kvstring = try $ do
   _ <- char ':'
   value <- many1 alphaNum
   _ <- whiteSpace
-  return $ Tasks.SKeyValue $ Tasks.KVString key value
+  return . Tasks.SKeyValue $ Tasks.KVString key value
 
 kvduedate :: Parser Tasks.StringTypes
 kvduedate = try $ do
   _ <- string "due:"
   d <- date
   _ <- whiteSpace
-  return $ Tasks.SKeyValue $ Tasks.KVDueDate d
+  return . Tasks.SKeyValue $ Tasks.KVDueDate d
 
 keyvalue :: Parser Tasks.StringTypes
 keyvalue = choice [ kvduedate, kvstring ]
@@ -191,7 +191,7 @@ task = do
 
 tasks :: Parser [Tasks.Task]
 tasks = do
-  tx <- option [] $ try $ many task
+  tx <- option [] . try $ many task
   return tx
 
 -- |Parses entire lines. This call includes the string for the file path which
