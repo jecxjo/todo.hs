@@ -419,6 +419,7 @@ process cfg ("report":[]) = process' (todoTxtPath cfg) reportSome
 -- Command Line: help
 process _ ("help":_) = do
   putStrLn "Usage: todo [-t path] [-s] action [task_number] [task_description]"
+  putStrLn "       todo [task_number]"
   putStrLn "Flags:"
   putStrLn $ " -t path    Points to todo.txt, default is $HOME/" ++ defaultTodoName
   putStrLn $ " -a path    Points to archive file, default is $HOME/" ++ defaultArchiveName
@@ -464,6 +465,18 @@ process cfg ("ls":rest) = process cfg ("list":rest)
 process cfg ("pri":rest) = process cfg ("priority":rest)
 process cfg ("sc":rest) = process cfg ("searchcompleted":rest)
 process cfg ("sa":rest) = process cfg ("searcharchived":rest)
+
+-- |Passing just number
+process cfg (idx:[]) =
+    case maybeRead idx :: Maybe Int of
+      Nothing -> process cfg ("help":[])
+      Just nIdx -> process' (todoTxtPath cfg) (listOne nIdx)
+  where
+    listOne i = (\xss -> forM_ xss printTuple) . (filter $ \(n,_) -> n == i)
+                                              . numberify
+                                              . sort
+                                              . onlyPending
+-- |Fail over
 process cfg _ = process cfg ("help":[])
 
 updatePriority :: FilePath -> Maybe Int -> Maybe Priority -> [Tasks.Task] -> IO ()

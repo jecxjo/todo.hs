@@ -4,6 +4,8 @@ All notable changes to thsi project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unversioned
+### Added
+- List an individual item using its number
 
 ## [0.3.0] - 2017-06-14
 ### Added
