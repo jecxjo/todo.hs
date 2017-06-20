@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ## Unversioned
 ### Added
 - List an individual item using its number
+- Projects command does pretty printing based on projects of pending
 
 ## [0.3.0] - 2017-06-14
 ### Added

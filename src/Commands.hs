@@ -8,7 +8,7 @@ module Commands
 
 import Control.Monad (forM_, msum)
 import Data.Char (toUpper, isAsciiUpper)
-import Data.List (sort, sortBy, find, isInfixOf)
+import Data.List (sort, sortBy, find, isInfixOf, nub)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
 import System.Directory (getHomeDirectory)
@@ -188,9 +188,9 @@ process cfg ("add":rest) = process' (todoTxtPath cfg) addToList
                                 writeTodoTxt (todoTxtPath cfg) (oldLines ++ [newTask])
                                 putStrLn $ "New Task: " ++ show newTask
                               else do
-                                let Incomplete pri due sx = newLine
+                                let Incomplete pri now sx = newLine
                                 sx' <- convertStringTypes sx
-                                let newTask = Incomplete pri due sx'
+                                let newTask = Incomplete pri now sx'
                                 writeTodoTxt (todoTxtPath cfg) (oldLines ++ [newTask])
                                 putStrLn $ "New Task: " ++ show newTask
 
@@ -255,9 +255,9 @@ process cfg ("append":idx:rest) = process' (todoTxtPath cfg) appendIdx
             case validateLine (show m ++ " " ++ unwords rest) of
               Left e -> error $ show e
               Right updated -> do
-                let Incomplete pri due sx = updated
+                let Incomplete pri now sx = updated
                 sx' <- convertStringTypes sx
-                let updated' = Incomplete pri due sx'
+                let updated' = Incomplete pri now sx'
                 writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in append"
@@ -281,9 +281,9 @@ process cfg ("prepend":idx:rest) = process' (todoTxtPath cfg) prependIdx
             case validateLine (unwords rest ++ " " ++ show m ++ " ") of
               Left e -> error $ show e
               Right updated -> do
-                let Incomplete pri due sx = updated
+                let Incomplete pri now sx = updated
                 sx' <- convertStringTypes sx
-                let updated' = Incomplete pri due sx'
+                let updated' = Incomplete pri now sx'
                 writeTodoTxt (todoTxtPath cfg) (nonMatch ++ [updated'] ++ completed)
                 putStrLn $ "Updated Task: " ++ show updated'
           _ -> do error "Error in prepend"
@@ -415,6 +415,24 @@ process cfg ("report":[]) = process' (todoTxtPath cfg) reportSome
         writeReportTxt reportPath iTasksLen cTasksLen
         putStrLn $ "Report Created: " ++ show iTasksLen ++ " " ++ show cTasksLen)
 
+process cfg ("projects":[]) = process' (todoTxtPath cfg) displayProjects
+  where
+    replace a b = map $ \c -> if c == a then b else c
+    proj t = nub
+              . sort
+              . map (replace '.' '-') -- Fix for '-' or '.' to break up subproj
+              . concat
+              $ map (filter (\x -> head x == '+') . words . show . snd) t
+    pTask tx p = (p, filter (any (== p) . words . (replace '.' '-') . show . snd) tx)
+    displayProjects xs = do
+      let pending = numberify . sort $ onlyPending xs
+      let projects = proj pending
+      let projects' = map (pTask pending) projects
+      forM_ projects' (\(p,tx) -> do
+        putStrLn $ "==== " ++ p ++ " ===="
+        forM_ tx printTuple
+        putStrLn "")
+
 -- |Help output
 -- Command Line: help
 process _ ("help":_) = do
@@ -443,6 +461,7 @@ process _ ("help":_) = do
   putStrLn " due"
   putStrLn " archive"
   putStrLn " searcharchived|sa \"regular expression\""
+  putStrLn " projects"
   putStrLn " help"
   putStrLn ""
   putStrLn "Key Value Supported:"
