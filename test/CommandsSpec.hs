@@ -3,7 +3,6 @@ module CommandsSpec where
 import Commands (process, ConfigOption(..))
 import Util (removeIfExists)
 
-import Control.Exception (ErrorCall(..))
 import Data.Maybe (fromJust)
 import System.Directory (doesFileExist)
 import System.FilePath (joinPath)
@@ -13,7 +12,8 @@ import Test.Hspec ( Spec
                   , shouldBe
                   , shouldSatisfy
                   , shouldThrow
-                  , before_)
+                  , before_
+                  , errorCall)
 import Text.Regex.Posix ((=~))
 
 -- |Helper function to read the contents of the todo.txt file
@@ -74,7 +74,7 @@ spec =
         it "does not append an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "append 3 +FooBar") `shouldThrow` (== ErrorCall "Invalid Index: append index \"text to append\"")
+          process cfg (words "append 3 +FooBar") `shouldThrow` (errorCall "Invalid Index: append index \"text to append\"")
 
     describe "Prepend action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -143,7 +143,7 @@ spec =
         it "does not complete an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "complete 3") `shouldThrow` (== ErrorCall "Invalid Index: complete index")
+          process cfg (words "complete 3") `shouldThrow` (errorCall "Invalid Index: complete index")
 
     describe "Delete action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -162,7 +162,7 @@ spec =
         it "does not delete an invalid index" $ do
           process cfg (words "add Task 1")
           process cfg (words "add Task 2")
-          process cfg (words "delete 3") `shouldThrow` (== ErrorCall "Invalid Index: delete index")
+          process cfg (words "delete 3") `shouldThrow` (errorCall "Invalid Index: delete index")
 
     describe "Priority action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do
@@ -183,11 +183,11 @@ spec =
 
         it "fails on invalid index" $ do
           process cfg (words "add (A) Task 1")
-          process cfg (words "priority 2 B") `shouldThrow` (== ErrorCall "Invalid Index: priority index [priority]")
+          process cfg (words "priority 2 B") `shouldThrow` (errorCall "Invalid Index: priority index [priority]")
 
         it "fails on invalid priority" $ do
           process cfg (words "add (A) Task 1")
-          process cfg (words "priority 1 5") `shouldThrow` (== ErrorCall "Invalid Priority: Valid values A-Z or left blank for no priority")
+          process cfg (words "priority 1 5") `shouldThrow` (errorCall "Invalid Priority: Valid values A-Z or left blank for no priority")
 
         it "allows lower case priority" $ do
           process cfg (words "add Task 1")
