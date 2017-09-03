@@ -11,6 +11,8 @@ import Data.Char (toUpper, isAsciiUpper)
 import Data.List (sort, sortBy, find, isInfixOf, nub)
 import Data.Maybe (isJust, fromJust, fromMaybe)
 import Data.Time (getCurrentTime, toGregorian, utctDay)
+import Data.Version (showVersion)
+import Paths_todo (version)
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath, replaceFileName)
 
@@ -26,7 +28,6 @@ import Tasks ( Task(..)
              , onlyCompleted
              , convertStringTypes)
 import Util (maybeRead)
-import Version (version)
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
@@ -472,7 +473,7 @@ process _ ("help":_) = do
 -- |Show Version
 -- Command Lin: version
 process _ ("version":_) = do
-  putStrLn $ "Version: " ++ version
+  putStrLn $ "Version: " ++ showVersion version
 
 -- Aliases
 process cfg ("remove":idx:[]) = process cfg ("delete":idx:[])

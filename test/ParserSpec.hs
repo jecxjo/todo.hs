@@ -47,6 +47,12 @@ spec =
       it "Matches +ProjectName-SubProjectName" $ do
         parse Parser.project "" "+ProjectName-SubProjectName" `shouldBe` Right (Tasks.SProject "ProjectName-SubProjectName")
 
+      it "Doesn't match +ProjectName..SubProjectName" $ do
+        parse Parser.project "" "+ProjectName..SubProjectName" `shouldNotBe` Right (Tasks.SProject "ProjectName..SubProjectName")
+
+      it "Doesn't match +ProjectName--SubProjectName" $ do
+        parse Parser.project "" "+ProjectName--SubProjectName" `shouldNotBe` Right (Tasks.SProject "ProjectName--SubProjectName")
+
     describe "Context" $ do
       it "Matches @ContextString" $ do
         parse Parser.context "" "@ContextString" `shouldBe` Right (Tasks.SContext "ContextString")

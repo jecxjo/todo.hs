@@ -20,6 +20,7 @@ module Parser
 
 import Control.Applicative (many)
 import Data.Char (toUpper)
+import Data.List (concat)
 import Data.Text (pack)
 import Text.Parsec.Char ( char
                         , oneOf
@@ -85,12 +86,15 @@ date = do
 project :: Parser Tasks.StringTypes
 project = do
     _ <- char '+'
-    c <- alphaNum
-    s <- many alphaNumDashDot
+    p <- many1 alphaNum
+    s <- many subProjects
     _ <- whiteSpace
-    return $ Tasks.SProject ([c] ++ s)
+    return $ Tasks.SProject (concat $ p : s)
   where
-    alphaNumDashDot = choice [alphaNum, oneOf "-."]
+    subProjects = do
+      x <- oneOf "-."
+      sub <- many1 alphaNum
+      return $ x : sub
 
 -- |Context: @ContextString
 context :: Parser Tasks.StringTypes
