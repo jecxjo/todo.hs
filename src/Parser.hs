@@ -86,14 +86,15 @@ date = do
 project :: Parser Tasks.StringTypes
 project = do
     _ <- char '+'
-    p <- many1 alphaNum
+    p <- many1 snakeCase
     s <- many subProjects
     _ <- whiteSpace
     return $ Tasks.SProject (concat $ p : s)
   where
+    snakeCase = choice [alphaNum, char '_']
     subProjects = do
       x <- oneOf "-."
-      sub <- many1 alphaNum
+      sub <- many1 snakeCase
       return $ x : sub
 
 -- |Context: @ContextString
