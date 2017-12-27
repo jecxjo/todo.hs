@@ -15,6 +15,7 @@ import Data.Version (showVersion)
 import Paths_todo (version)
 import System.Directory (getHomeDirectory)
 import System.FilePath (joinPath, replaceFileName)
+import System.IO (hFlush, stdout)
 
 import FileHandler (readTodoTxt, writeTodoTxt, appendTodoTxt, writeReportTxt)
 import Parser (validateLine)
@@ -27,13 +28,14 @@ import Tasks ( Task(..)
              , onlyPending
              , onlyCompleted
              , convertStringTypes)
-import Util (maybeRead)
+import Util (maybeRead, readChar)
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
                                  , archiveTxtPath :: Maybe FilePath
                                  , reportTxtPath :: Maybe FilePath
                                  , timeStamp :: Maybe Date
+                                 , autoAccept :: Maybe Bool
                                  }
 
 -- |Defaults
@@ -57,6 +59,20 @@ denumbrify = map snd
 -- |Print a numbered array
 printTuple :: (Show a, Show b) => (a, b) -> IO ()
 printTuple (n, t) = putStrLn $ show n ++ ": " ++ show t
+
+-- |Queries if use wishes to delete task
+queryDeletion :: Maybe Bool -> Task -> IO Bool
+queryDeletion (Just True) _ = return True
+queryDeletion (Just False) _ = return False
+queryDeletion _ task =
+  putStrLn (show task) >>
+  putStr "Delete Task (N/y)? " >>
+  hFlush stdout >>
+  readChar >>= f
+    where f 'Y' = putStrLn "" >> return True
+          f 'y' = putStrLn "" >> return True
+          f '\n' = return False -- Special case because it prints a new line which we don't want
+          f _ = putStrLn "" >> return False
 
 -- |Returns the file path for todo.txt
 -- Currently it is set to the home directory.
@@ -103,7 +119,7 @@ sortTupleDueDate = sortBy sortFn
 processArgs :: [String] -> IO ()
 processArgs args = do
   path <- todoFilePath
-  process (ConfigOption path Nothing Nothing Nothing) args
+  process (ConfigOption path Nothing Nothing Nothing Nothing) args
 
 -- |Reads the file, print error or calls a function to handle the list of todo
 -- items.
@@ -140,6 +156,11 @@ process cfg ("-s":rest) = do
 
 -- |Flag for passing in the location of report.txt file
 process cfg ("-r":path:rest) = process (cfg { reportTxtPath = Just path }) rest
+
+-- |Flag for auto acceping/delying any queries
+process cfg ("-y":rest) = process (cfg { autoAccept = Just True }) rest
+process cfg ("-n":rest) = process (cfg { autoAccept = Just False }) rest
+
 
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
@@ -205,9 +226,14 @@ process cfg ("delete":idx:[]) = process' (todoTxtPath cfg) deleteIdx
       let completed = onlyCompleted xs
       if (isJust nIdx) && (length xss >= (fromJust nIdx)) && ((fromJust nIdx) > 0)
       then do
-        writeTodoTxt (todoTxtPath cfg)
-                     $ (denumbrify $ filter (\(n, _) -> n /= (fromJust nIdx)) xss) ++ completed
-        putStrLn "Task Deleted"
+        doDelete <- queryDeletion (autoAccept cfg) $ head . denumbrify $ filter (\(n, _) -> n == (fromJust nIdx)) xss
+        if doDelete
+        then do
+          writeTodoTxt (todoTxtPath cfg)
+                      $ (denumbrify $ filter (\(n, _) -> n /= (fromJust nIdx)) xss) ++ completed
+          putStrLn "Task Deleted"
+        else do
+          putStrLn "No Tasks Deleted"
       else do
         error "Invalid Index: delete index"
 
@@ -444,6 +470,8 @@ process _ ("help":_) = do
   putStrLn $ " -a path    Points to archive file, default is $HOME/" ++ defaultArchiveName
   putStrLn " -s         Auto timestamp new tasks"
   putStrLn $ " -r path    Points to report file, default is $HOME/" ++ defaultReportName
+  putStrLn " -y         Auto accept for any questions (like pressing Y)"
+  putStrLn " -n         Auto deny for any questions (like pressing N)"
   putStrLn ""
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""

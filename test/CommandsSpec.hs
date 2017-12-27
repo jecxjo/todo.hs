@@ -35,7 +35,9 @@ spec =
     let cfg = ConfigOption { todoTxtPath = joinPath [".", "todo-testing.txt"]
                            , archiveTxtPath = Just $ joinPath [".", "archive-testing.txt"]
                            , reportTxtPath = Just $ joinPath [".", "report-testing.txt"]
-                           , timeStamp = Nothing }
+                           , timeStamp = Nothing
+                           , autoAccept = Just True
+                           }
 
     describe "Add action" $ do
       before_ (removeIfExists $ todoTxtPath cfg) $ do

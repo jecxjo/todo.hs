@@ -8,6 +8,7 @@ module Util
     , MonadDate(..)
     , getToday
     , maybeRead
+    , readChar
     ) where
 
 import Control.Exception
@@ -16,6 +17,7 @@ import Data.Time (getCurrentTime, utctDay)
 import Data.Time.Calendar (Day(..))
 import System.Directory
 import System.IO.Error
+import System.IO (hSetBuffering, hGetBuffering, stdin, BufferMode(..))
 
 -- |subsetOf filters a list that contains a set of elements
 subsetOf :: (Eq a, Foldable t) => [a] -> t a -> Bool
@@ -45,3 +47,12 @@ instance MonadDate IO where
 -- |MaybeRead is like Read but instead of exception returns Nothing
 maybeRead :: Read a => String -> Maybe a
 maybeRead = fmap fst . listToMaybe . reads
+
+-- |Read a single character on input
+readChar :: IO Char
+readChar = do
+  cBuffering <- hGetBuffering stdin
+  hSetBuffering stdin NoBuffering
+  c <- getChar
+  hSetBuffering stdin cBuffering
+  return c
