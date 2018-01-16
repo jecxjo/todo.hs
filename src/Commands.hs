@@ -173,6 +173,20 @@ process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
                                               . sort
                                               . onlyPending
 
+-- |List priority entries with project and context filters
+process cfg ("listpriority":filters) = process' (todoTxtPath cfg) listSome
+  where
+    isInfixOfUpper s t = map toUpper s `isInfixOf` map toUpper t
+    filterFn (_, t) = foldl (\b s -> b && (isInfixOfUpper s (show t))) True filters
+    filterPri (_, t) = case t of
+                          Incomplete (Just _) _ _ -> True
+                          _ -> False
+    listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
+                                              . (filter filterPri)
+                                              . numberify
+                                              . sort
+                                              . onlyPending
+
 -- |search for tasks matching regex
 process cfg ("search":filters) = process' (todoTxtPath cfg) searchSome
   where
@@ -476,6 +490,7 @@ process _ ("help":_) = do
   putStrLn "Actions:"
   putStrLn " add \"Task I need to do +project @context\""
   putStrLn " list|ls +project @context"
+  putStrLn " listpriority|lsp +prject @context"
   putStrLn " search \"regular expression\""
   putStrLn " delete|del|remove|rm TASKNUM"
   putStrLn " complete|done|do TASKNUM"
@@ -513,6 +528,7 @@ process cfg ("ls":rest) = process cfg ("list":rest)
 process cfg ("pri":rest) = process cfg ("priority":rest)
 process cfg ("sc":rest) = process cfg ("searchcompleted":rest)
 process cfg ("sa":rest) = process cfg ("searcharchived":rest)
+process cfg ("lsp":rest) = process cfg ("listpriority":rest)
 
 -- |Passing just number
 process cfg (idx:[]) =
