@@ -9,6 +9,8 @@ module Util
     , getToday
     , maybeRead
     , readChar
+    , digitCount
+    , showPaddedNumber
     ) where
 
 import Control.Exception
@@ -56,3 +58,14 @@ readChar = do
   c <- getChar
   hSetBuffering stdin cBuffering
   return c
+
+-- |Calculate the number of digits
+digitCount :: (Num a, Integral t) => t -> a
+digitCount x
+    | x < 0 = digitCount $ abs x
+    | x < 10 = 1
+    | otherwise = 1 + digitCount ((x - (x `mod` 10)) `div` 10)
+
+-- |Show Number with padding
+showPaddedNumber width number =
+  (take (width - (digitCount number)) $ repeat ' ') ++ show number

@@ -28,7 +28,7 @@ import Tasks ( Task(..)
              , onlyPending
              , onlyCompleted
              , convertStringTypes)
-import Util (maybeRead, readChar)
+import Util (maybeRead, readChar, showPaddedNumber, digitCount)
 
 data ConfigOption = ConfigOption {
                                    todoTxtPath :: FilePath
@@ -53,12 +53,15 @@ numberify :: [a] -> [(Int, a)]
 numberify = zipWith (\n t -> (n, t)) [1..]
 
 -- |Turn a number array back into an array
-denumbrify :: [(Int, a)] -> [a]
+denumbrify :: [(b, a)] -> [a]
 denumbrify = map snd
 
 -- |Print a numbered array
-printTuple :: (Show a, Show b) => (a, b) -> IO ()
-printTuple (n, t) = putStrLn $ show n ++ ": " ++ show t
+printTuple :: (Show a) => [(Int, a)] -> IO ()
+printTuple lst = forM_ lst print'
+  where width = digitCount $ maximum $ fst $ unzip lst
+        print' (n, t) = putStrLn $ (showPaddedNumber width n) ++ ": " ++ show t
+
 
 -- |Queries if use wishes to delete task
 queryDeletion :: Maybe Bool -> Task -> IO Bool
@@ -138,9 +141,10 @@ process :: ConfigOption -> [String] -> IO ()
 -- |Default Command, list all entries
 -- Command Line:
 process cfg [] = process' (todoTxtPath cfg) listAll
-  where listAll = (\xss -> forM_ xss printTuple) . numberify
-                                                 . sort
-                                                 . onlyPending
+  where listAll = printTuple
+                . numberify
+                . sort
+                . onlyPending
 
 -- |Flag for passing in the location of the todo.txt file
 process cfg ("-t":path:rest) = process (cfg { todoTxtPath = path }) rest
@@ -168,10 +172,11 @@ process cfg ("list":filters) = process' (todoTxtPath cfg) listSome
   where
     isInfixOfUpper s t = map toUpper s `isInfixOf` map toUpper t
     filterFn (_, t) = foldl (\b s -> b && (isInfixOfUpper s (show t))) True filters
-    listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
-                                              . numberify
-                                              . sort
-                                              . onlyPending
+    listSome = printTuple
+             . (filter filterFn)
+             . numberify
+             . sort
+             . onlyPending
 
 -- |List priority entries with project and context filters
 process cfg ("listpriority":filters) = process' (todoTxtPath cfg) listSome
@@ -181,21 +186,23 @@ process cfg ("listpriority":filters) = process' (todoTxtPath cfg) listSome
     filterPri (_, t) = case t of
                           Incomplete (Just _) _ _ -> True
                           _ -> False
-    listSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
-                                              . (filter filterPri)
-                                              . numberify
-                                              . sort
-                                              . onlyPending
+    listSome = printTuple
+             . (filter filterFn)
+             . (filter filterPri)
+             . numberify
+             . sort
+             . onlyPending
 
 -- |search for tasks matching regex
 process cfg ("search":filters) = process' (todoTxtPath cfg) searchSome
   where
     matchFn = matchGen $ unwords filters
     filterFn (_, t) = matchFn $ show t
-    searchSome = (\xss -> forM_ xss printTuple) . (filter filterFn)
-                                                . numberify
-                                                . sort
-                                                . onlyPending
+    searchSome = printTuple
+               . (filter filterFn)
+               . numberify
+               . sort
+               . onlyPending
 
 -- |search completed tasks matching regex
 -- Command Line: searchcompleted "foo"
@@ -203,10 +210,11 @@ process cfg ("searchcompleted":filters) = process' (todoTxtPath cfg) someComplet
   where
     matchFn = matchGen $ unwords filters
     filterFn (_, t) = matchFn $ show t
-    someCompleted = (\xss -> forM_ xss printTuple) . (filter filterFn)
-                                                   . numberify
-                                                   . sort
-                                                   . onlyCompleted
+    someCompleted = printTuple
+                  . (filter filterFn)
+                  . numberify
+                  . sort
+                  . onlyCompleted
 
 
 -- |Add task to list
@@ -275,9 +283,10 @@ process cfg ("complete":idx:[]) = process' (todoTxtPath cfg) completeIdx
 -- Command Line: completed
 process cfg ("completed":[]) = process' (todoTxtPath cfg) completed
   where
-    completed = (\xss -> forM_ xss printTuple) . numberify
-                                               . sort
-                                               . onlyCompleted
+    completed = printTuple
+              . numberify
+              . sort
+              . onlyCompleted
 
 -- |Append to a currently existing task
 -- Command Line: append 1 Text to add to task 1
@@ -410,7 +419,7 @@ process cfg ("priority":idx:[]) = process' (todoTxtPath cfg) go
 
 process cfg ("due":[]) = process' (todoTxtPath cfg) listSome
   where
-    listSome = (\xss -> forM_ xss printTuple)
+    listSome = printTuple
              . sortTupleDueDate
              . filterTupleDueDate
              . numberify
@@ -431,10 +440,11 @@ process cfg ("searcharchived":filters) = process' (todoTxtPath cfg) searcharchiv
   where
     matchFn = matchGen $ unwords filters
     filterFn (_, t) = matchFn $ show t
-    someCompleted = (\xss -> forM_ xss printTuple) . (filter filterFn)
-                                                   . numberify
-                                                   . sort
-                                                   . onlyCompleted
+    someCompleted = printTuple
+                  . (filter filterFn)
+                  . numberify
+                  . sort
+                  . onlyCompleted
     searcharchived _ = do
       let archPath = getArchivePath cfg
       todo <- readTodoTxt archPath
@@ -471,7 +481,7 @@ process cfg ("projects":[]) = process' (todoTxtPath cfg) displayProjects
       let projects' = map (pTask pending) projects
       forM_ projects' (\(p,tx) -> do
         putStrLn $ "==== " ++ p ++ " ===="
-        forM_ tx printTuple
+        printTuple tx
         putStrLn "")
 
 -- |Help output
@@ -536,10 +546,11 @@ process cfg (idx:[]) =
       Nothing -> process cfg ("help":[])
       Just nIdx -> process' (todoTxtPath cfg) (listOne nIdx)
   where
-    listOne i = (\xss -> forM_ xss printTuple) . (filter $ \(n,_) -> n == i)
-                                              . numberify
-                                              . sort
-                                              . onlyPending
+    listOne i = printTuple
+              . (filter $ \(n,_) -> n == i)
+              . numberify
+              . sort
+              . onlyPending
 -- |Fail over
 process cfg _ = process cfg ("help":[])
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module UtilSpec where
 
-import Util (subsetOf, MonadDate(..), getToday, maybeRead)
+import Util (subsetOf, MonadDate(..), getToday, maybeRead, digitCount, showPaddedNumber)
 
 import Data.Functor.Identity
 import Data.Time (fromGregorian, toGregorian)
@@ -68,3 +68,17 @@ spec =
       it "Returns Nothing for \"a\" as type Int" $ do
         let result = (maybeRead "a") :: Maybe Int
         result `shouldBe` Nothing
+
+    describe "digitCount" $ do
+      it "Calculates multiple digit positive numbers" $ do
+          (map digitCount [0, 1, 12, 123, 1234, 12345, 123456, 1234567, 12345678, 123456789, 1234567890]) `shouldBe` [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+      it "Calculates multiple digit negative numbers" $ do
+          (map digitCount [(-1), (-12), (-123), (-1234), (-12345), (-123456), (-1234567), (-12345678), (-123456789), (-1234567890)]) `shouldBe` [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    describe "showPaddedNumber" $ do
+      it "Adds white space when too small" $ do
+        showPaddedNumber 10 123 `shouldBe` "       123"
+
+      it "fits size when too big" $ do
+        showPaddedNumber 1 123 `shouldBe` "123"
