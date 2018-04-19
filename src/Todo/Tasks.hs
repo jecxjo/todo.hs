@@ -1,16 +1,16 @@
-module Tasks
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+module Todo.Tasks
   (
     Priority
   , Project
   , Context
-  , Date(..)
   , KeyValue(..)
   , StringTypes(..)
   , Task(..)
-  , onlyPending
-  , onlyCompleted
-  , filterProjects
-  , filterContext
+  , isIncomplete
+  , isCompleted
+  , containsText
   , convertToDate
   , convertStringTypes
   , getProjects
@@ -19,13 +19,17 @@ module Tasks
   , extractDueDate
   ) where
 
-import Util (subsetOf, MonadDate(..), getToday)
-
-import Data.Char (toLower)
-import Data.Time (toGregorian)
-import Data.Time.Calendar (addDays)
-import Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
-import Data.Traversable (forM)
+import           Control.Monad (liftM)
+import           Data.Bool (bool)
+import           Data.Char (toLower)
+import           Data.Time (toGregorian)
+import           Data.Time.Calendar (addDays, Day(..))
+import           Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
+import           Data.Traversable (forM)
+import qualified Data.Text as T
+import           Data.Text (Text)
+import           Todo.Util (subsetOf)
+import           Todo.App (MonadDate, AppError, getDay, throwError, ErrorType(..))
 
 -- |Priority: (A)
 type Priority = Char
@@ -36,34 +40,8 @@ type Project = String
 -- |Context: @ContextString
 type Context = String
 
--- |Date: Year, Month, Day
-data Date = Date Integer Int Int
-
--- |Show Date in YYYY-MM-DD format
-instance Show Date where
-  show (Date year month day) = show year
-                               ++ "-" ++ showDoubleDigit month
-                               ++ "-" ++ showDoubleDigit day
-    where showDoubleDigit num = if num < 10
-                                then "0" ++ show num
-                                else show num
-
--- |Check if two Dates are equal
-instance Eq Date where
-  (Date y1 m1 d1) == (Date y2 m2 d2) = y1 == y2
-                                       && m1 == m2
-                                       && d1 == d2
-
--- |Compare (LT,GT,EQ) two Dates
-instance Ord Date where
-  compare (Date y1 m1 d1) (Date y2 m2 d2) = if y1 /= y2
-                                            then compare y1 y2
-                                            else if m1 /= m2
-                                                 then compare m1 m2
-                                                 else compare d1 d2
-
 -- |Key Value pairs: due:2017-01-02
-data KeyValue = KVDueDate Date
+data KeyValue = KVDueDate Day
               | KVString String String
               deriving (Eq)
 
@@ -103,14 +81,14 @@ getKeyValues = map (\(SKeyValue kv) -> kv) . filter fn
   where fn (SKeyValue _) = True
         fn _ = False
 
-extractDueDate :: [StringTypes] -> Maybe Date
+extractDueDate :: [StringTypes] -> Maybe Day
 extractDueDate [] = Nothing
 extractDueDate ((SKeyValue (KVDueDate d)):_) = Just d
 extractDueDate (_:xs) = extractDueDate xs
 
 -- |Data type to store both incomplete and completed tasks.
-data Task = Incomplete (Maybe Priority) (Maybe Date) [StringTypes]
-          | Completed Date Task
+data Task = Incomplete (Maybe Priority) (Maybe Day) [StringTypes]
+          | Completed Day Task
 
 -- |Show Task in format "(A) 2016-07-30 Task to do +Project @Context"
 instance Show Task where
@@ -145,67 +123,50 @@ instance Ord Task where
   compare (Completed _ t1) (Completed _ t2) = compare t1 t2
 
 -- |Filters out all completed tasks and returns a list of incomplete
-onlyPending :: [Task] -> [Task]
-onlyPending = filter isPending
-  where isPending (Incomplete _ _ _) = True
-        isPending _ = False
+isIncomplete :: Task -> Bool
+isIncomplete (Incomplete _ _ _) = True
+isIncomplete _ = False
 
 -- |Filters out all incomplete tasks and returns a list of completed
-onlyCompleted :: [Task] -> [Task]
-onlyCompleted = filter isCompleted
-  where isCompleted (Completed _ _) = True
-        isCompleted _ = False
+isCompleted :: Task -> Bool
+isCompleted (Completed _ _) = True
+isCompleted _ = False
 
--- |Filters based on Projects. Strings for project should not contain '+' as
--- defined by todo.txt
-filterProjects :: [Project] -> [Task] -> [Task]
-filterProjects px = filter projectFilter
-  where projectFilter (Incomplete _ _ sx) = px `subsetOf` (getProjects sx)
-        projectFilter (Completed _ t) = projectFilter t
-
--- |Filters based on Context. Strings for context should not contain '@' as
--- defined by todo.txt
-filterContext :: [Context] -> [Task] -> [Task]
-filterContext cx = filter contextFilter
-  where contextFilter (Incomplete _ _ sx) = cx `subsetOf` (getContexts sx)
-        contextFilter (Completed _ t) = contextFilter t
+-- | Returns True if task contains the list of text
+containsText :: [Text] -> Task -> Bool
+containsText terms task = foldl (\res term -> res && (T.toUpper term) `T.isInfixOf` (T.toUpper . T.pack $ show task)) True terms
 
 -- |Convert String to Date
-convertToDate :: MonadDate m => String -> m Date
-convertToDate str = do
-    let dateStr = map toLower str
-    let dateNum = toNum dateStr
-    today <- getToday
-    let (yr,wk,wday) = toWeekDate $ today
-    case dateStr of
-      "today" -> (return . genDate) $ toGregorian today
-      "tomorrow" -> (return . genDate . toGregorian) $ addDays 1 today
-      "yesterday" -> (return . genDate . toGregorian) $ addDays (-1) today
-      _ -> if dateNum <= wday
-           then do
-              (return . genDate . toGregorian . addDays 7) $ fromWeekDate yr wk dateNum
-           else do
-              (return . genDate . toGregorian) $ fromWeekDate yr wk dateNum
+convertToDate :: (AppError m, MonadDate m) => String -> m Day
+convertToDate str
+  | dayString == "today" = getDay
+  | dayString == "tomorrow" = getDay >>= (return . addDays 1)
+  | dayString == "yesterday" = getDay >>= (return . addDays (-1))
+  | dayString == "monday" = getDay >>= dayOfWeek 1
+  | dayString == "mon" = getDay >>= dayOfWeek 1
+  | dayString == "tuesday" = getDay >>= dayOfWeek 2
+  | dayString == "tue" = getDay >>= dayOfWeek 2
+  | dayString == "wednesday" = getDay >>= dayOfWeek 3
+  | dayString == "wed" = getDay >>= dayOfWeek 3
+  | dayString == "thursday" = getDay >>= dayOfWeek 4
+  | dayString == "thu" = getDay >>= dayOfWeek 4
+  | dayString == "friday" = getDay >>= dayOfWeek 5
+  | dayString == "fri" = getDay >>= dayOfWeek 5
+  | dayString == "saturday" = getDay >>= dayOfWeek 6
+  | dayString == "sat" = getDay >>= dayOfWeek 6
+  | dayString == "sunday" = getDay >>= dayOfWeek 7
+  | dayString == "sun" = getDay >>= dayOfWeek 7
+  | otherwise = throwError . EMiscError . T.pack $ "invalid relative date '" ++ str ++ "'"
   where
-    toNum "monday" = 1
-    toNum "mon" = 1
-    toNum "tuesday" = 2
-    toNum "tue" = 2
-    toNum "wednesday" = 3
-    toNum "wed" = 3
-    toNum "thursday" = 4
-    toNum "thu" = 4
-    toNum "friday" = 5
-    toNum "fri" = 5
-    toNum "saturday" = 6
-    toNum "sat" = 6
-    toNum "sunday" = 7
-    toNum "sun" = 7
-    toNum _ = error "Bad Due Date"
-    genDate (y,m,d) = Date y m d
+    dayString = map toLower str
+    dayOfWeek off day = do
+      let (yr,wk,wday) = toWeekDate day
+      if (off <= wday)
+      then return . addDays 7 $ fromWeekDate yr wk off
+      else return $ fromWeekDate yr wk off
 
 -- |Convert all KV Due Dates that are strings into actual dates
-convertStringType :: MonadDate m => StringTypes -> m StringTypes
+convertStringType :: (AppError m, MonadDate m) => StringTypes -> m StringTypes
 convertStringType (SKeyValue kv) = do
     case kv of
       KVString "due" val -> do
@@ -216,5 +177,5 @@ convertStringType (SKeyValue kv) = do
 convertStringType rest = do
   return rest
 
-convertStringTypes :: MonadDate m => [StringTypes] -> m [StringTypes]
+convertStringTypes :: (AppError m, MonadDate m) => [StringTypes] -> m [StringTypes]
 convertStringTypes alst = forM alst convertStringType

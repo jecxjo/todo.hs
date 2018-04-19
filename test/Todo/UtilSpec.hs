@@ -1,23 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module UtilSpec where
+module Todo.UtilSpec where
 
-import Util (subsetOf, MonadDate(..), getToday, maybeRead, digitCount, showPaddedNumber)
-
-import Data.Functor.Identity
-import Data.Time (fromGregorian, toGregorian)
-import Test.Hspec (Spec, describe, it, shouldBe)
-
--- |Test type for verifying MonadDate
-newtype TestM a = TestM (Identity a)
-  deriving (Functor, Applicative, Monad)
-
-unTestM :: TestM a -> a
-unTestM (TestM (Identity x)) = x
-
-instance MonadDate TestM where
-  getDay = return (fromGregorian 2017 3 13)
-
+import qualified Data.List as L
+import           Test.Hspec (Spec, describe, it, shouldBe)
+import           Todo.Util
 
 -- | Required for auto-discovery
 spec :: Spec
@@ -54,12 +41,6 @@ spec =
       it "Does not match subset of empty list" $ do
         (([2] :: [Int]) `subsetOf` ([] :: [Int])) `shouldBe` False
 
-    describe "MonadDate" $ do
-      it "Returns the Year, Month, Day" $ do
-        let today = unTestM $ getToday
-        let result = toGregorian today
-        result `shouldBe` (2017, 3, 13)
-
     describe "maybeRead" $ do
       it "Returns Just 1 for \"1\" as type Int" $ do
         let result = (maybeRead "1") :: Maybe Int
@@ -82,3 +63,38 @@ spec =
 
       it "fits size when too big" $ do
         showPaddedNumber 1 123 `shouldBe` "123"
+
+    describe "notEmpty" $ do
+      let fn :: [Int] -> Int
+          fn = L.maximum
+
+      it "Returns value when empty" $ do
+        (notEmpty (-1) fn ([] :: [Int])) `shouldBe` (-1)
+
+      it "Returns computation when not empty" $ do
+        (notEmpty (-1) fn ([1,2,3] :: [Int])) `shouldBe` 3
+
+    describe "maybeFilter" $ do
+      it "returns nothing when nothing is filtered" $ do
+        maybeFilter even [1,3,5] `shouldBe` Nothing
+
+      it "returns nothing when nothing is filtered" $ do
+        maybeFilter even [2,3,4] `shouldBe` Just [2,4]
+
+    describe "maybeToEither" $ do
+      it "returns left on nothing" $ do
+        maybeToEither "error case" (Nothing :: Maybe Int) `shouldBe` Left "error case"
+
+      it "returns left on nothing" $ do
+        maybeToEither "error case" (Just 1 :: Maybe Int) `shouldBe` (Right 1)
+
+    describe "replace" $ do
+      it "returns an empty list when an empty list" $ do
+        replace 1 2 [] `shouldBe` []
+
+      it "returns a list with no changes when no matches" $ do
+        replace 1 2 [3,4,5] `shouldBe` [3,4,5]
+
+      it "returns a list with no changes when no matches" $ do
+        replace 1 2 [1,4,1] `shouldBe` [2,4,2]
+

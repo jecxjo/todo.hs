@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module RegExSpec where
+module Todo.RegExSpec where
 
-import RegEx (matchGen, swapGen, swapAllGen)
+import Todo.RegEx (matchGen, swapGen, swapAllGen)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

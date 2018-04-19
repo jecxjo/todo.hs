@@ -1,0 +1,62 @@
+name:                todo
+version:             0.4.0.0
+github:              "jecxjo/todo.hs"
+license:             BSD3
+author:              "Jeff Parent"
+maintainer:          "jeff@commentedcode.org"
+copyright:           "Copyright 2016 Jeff Parent"
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+- LICENSE
+
+# Metadata used when publishing your package
+synopsis:            A todo.txt cli implementation in haskell
+category:            Productivity
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/jecxjo/todo.hs#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- parsec
+- text
+- directory
+- filepath
+- time
+- transformers
+- regex-pcre-builtin
+- errors
+- transformers
+- mtl
+- monad-control
+
+library:
+  source-dirs: src
+
+executables:
+  todo:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:         -Wall
+    dependencies:
+    - todo
+
+tests:
+  todo-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:         -Wall
+    dependencies:
+    - todo
+    - hspec
+    - text
+    - time
+    - parsec
+    - directory
+    - filepath
+    - regex-pcre-builtin
+    - test-fixture

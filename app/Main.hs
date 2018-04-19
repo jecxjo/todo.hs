@@ -1,10 +1,10 @@
 module Main where
 
-import System.Environment (getArgs)
-
-import Commands (processArgs)
+import Todo.App
+import Todo.Commands (parseArgs)
+import Todo.Commands.Helpers (todoFilePath)
 
 main :: IO ()
 main = do
-  args <- getArgs
-  processArgs args
+  defaultPath <- todoFilePath
+  runApp (Options defaultPath Nothing Nothing Nothing Nothing) parseArgs

@@ -1,25 +1,29 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Util
+module Todo.Util
     (
       subsetOf
     , removeIfExists
-    , MonadDate(..)
-    , getToday
     , maybeRead
     , readChar
     , digitCount
     , showPaddedNumber
+    , notEmpty
+    , maybeFilter
+    , maybeToEither
+    , replace
     ) where
 
-import Control.Exception
-import Data.Maybe (listToMaybe)
-import Data.Time (getCurrentTime, utctDay)
-import Data.Time.Calendar (Day(..))
-import System.Directory
-import System.IO.Error
-import System.IO (hSetBuffering, hGetBuffering, stdin, BufferMode(..))
+import           Control.Exception
+import           Data.Bool (bool)
+import           Data.Maybe (listToMaybe)
+import           Data.Text (Text)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import           System.Directory
+import           System.IO.Error
+import           System.IO (hSetBuffering, hGetBuffering, stdin, BufferMode(..))
 
 -- |subsetOf filters a list that contains a set of elements
 subsetOf :: (Eq a, Foldable t) => [a] -> t a -> Bool
@@ -31,20 +35,6 @@ removeIfExists fileName = removeFile fileName `catch` handleExists
   where handleExists e
           | isDoesNotExistError e = return ()
           | otherwise = throwIO e
-
--- |A class for handling Dates, allowing testing to not rely on IO ()
-class Monad m => MonadDate m where
-  getDay :: m Day
-
-getToday :: MonadDate m => m Day
-getToday = do
-  d <- getDay
-  return d
-
-instance MonadDate IO where
-  getDay = do
-    c <- getCurrentTime
-    return $ utctDay c
 
 -- |MaybeRead is like Read but instead of exception returns Nothing
 maybeRead :: Read a => String -> Maybe a
@@ -69,3 +59,21 @@ digitCount x
 -- |Show Number with padding
 showPaddedNumber width number =
   (take (width - (digitCount number)) $ repeat ' ') ++ show number
+
+-- | Similar to maybe and bool, the notEmpty applies a function on a non-empty list
+notEmpty :: b -> ([a] -> b) -> [a] -> b
+notEmpty emptyRes nonEmptyFn lst = bool emptyRes (nonEmptyFn lst) (0 < length lst)
+
+-- | Similar to filter, returning Nothing if nothing was filtered out, otherwise Just [a]
+maybeFilter :: (a -> Bool) -> [a] -> Maybe [a]
+maybeFilter fn lst = do
+  let filtered = filter fn lst
+  bool Nothing (Just filtered) (length filtered /= 0)
+
+-- | Converts Maybe to Either
+maybeToEither :: e -> Maybe a -> Either e a
+maybeToEither = flip maybe Right . Left
+
+-- | Replace elements from a list
+replace :: Eq a => a -> a -> [a] -> [a]
+replace a b = map $ \c -> if c == a then b else c

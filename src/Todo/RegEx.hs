@@ -1,4 +1,4 @@
-module RegEx
+module Todo.RegEx
   ( matchGen
   , swapGen
   , swapAllGen

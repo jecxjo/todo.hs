@@ -1,4 +1,4 @@
-module Parser
+module Todo.Parser
     (
       whiteSpace
     , priority
@@ -13,7 +13,7 @@ module Parser
     , completedTask
     , task
     , tasks
-    , Parser.ParseError
+    , Todo.Parser.ParseError
     , parseLines
     , validateLine
     ) where
@@ -22,6 +22,7 @@ import Control.Applicative (many)
 import Data.Char (toUpper)
 import Data.List (concat)
 import Data.Text (pack)
+import Data.Time.Calendar (fromGregorian, Day(..))
 import Text.Parsec.Char ( char
                         , oneOf
                         , letter
@@ -38,7 +39,7 @@ import Text.Parsec.Error as E
 import Text.Parsec.Prim (parse, try)
 import Text.Parsec.Text
 
-import qualified Tasks as Tasks
+import qualified Todo.Tasks as Tasks
 
 type ParseError = E.ParseError
 
@@ -60,14 +61,14 @@ priority = do
 
 -- |Date: 2017-02-23
 -- Supports 2 or 4 digit year, and 1 or 2 digit month and day.
-date :: Parser Tasks.Date
+date :: Parser Day
 date = do
     year <- twoToFourDigits
     _ <- char '-'
     month <- oneToTwoDigits
     _ <- char '-'
     day <- oneToTwoDigits
-    return $ Tasks.Date (convertYear $ read year) (read month) (read day)
+    return $ fromGregorian (convertYear $ read year) (read month) (read day)
   where oneToTwoDigits = do
           x <- digit
           y <- option ' ' $ digit
@@ -201,10 +202,10 @@ tasks = do
 
 -- |Parses entire lines. This call includes the string for the file path which
 -- is used in the error message.
-parseLines :: String -> String -> Either Parser.ParseError [Tasks.Task]
+parseLines :: String -> String -> Either Todo.Parser.ParseError [Tasks.Task]
 parseLines path lns = parse tasks path (pack lns)
 
 -- |Validates a single line. This is used to check if the string passed for
 -- creating a new task is valid.
-validateLine :: String -> Either Parser.ParseError Tasks.Task
+validateLine :: String -> Either Todo.Parser.ParseError Tasks.Task
 validateLine content = parse task "" (pack content)

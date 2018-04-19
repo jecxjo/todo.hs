@@ -3,7 +3,11 @@ All notable changes to thsi project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## Unversioned
+## [0.4.0] - 2018-04-18
+### Changed
+- Moved to an mtl style design
+
+## [0.3.1] - 2018-01-30
 ### Added
 - List an individual item using its number
 - Projects command does pretty printing based on projects of pending
