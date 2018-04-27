@@ -9,6 +9,7 @@ module Todo.App (
     AppM(..),
     runApp,
     emptyOptions,
+    initOptions,
     renderError,
     module Control.Monad.State,
     module Control.Monad.Except,
@@ -39,13 +40,17 @@ data Options = Options {
                        , reportTxtPath :: Maybe FilePath
                        , timeStamp :: Maybe Day
                        , autoAccept :: Maybe Bool
+                       , forcedPrompt :: Bool
                        }
                        deriving (Show, Eq)
 
 type AppConfig = MonadState Options
 
 emptyOptions :: Options
-emptyOptions = Options "" Nothing Nothing Nothing Nothing
+emptyOptions = Options "" Nothing Nothing Nothing Nothing False
+
+initOptions :: FilePath -> Options
+initOptions path = Options path Nothing Nothing Nothing Nothing False
 
 data ErrorType
   = EInvalidIndex Int
@@ -54,6 +59,7 @@ data ErrorType
   | EIOError E.IOException
   | EMiscError Text
   | EParseError PE.ParseError
+  | EShortCircuit Text
   deriving (Show, Eq)
 
 type AppError = MonadError ErrorType
@@ -74,4 +80,4 @@ renderError (EInvalidArg arg) = "todo: invalid argument -- '" <> arg <> "'"
 renderError (EIOError e) = "todo: " <> T.pack (E.displayException e)
 renderError (EMiscError t) = "todo: " <> t
 renderError (EParseError pe) = "todo: parse error(s) -- " <> (T.pack $ show $ PE.errorPos pe) <> " " <> (T.intercalate "\n" $ map (T.pack . PE.messageString) $ PE.errorMessages pe)
-
+renderError (EShortCircuit txt) = txt

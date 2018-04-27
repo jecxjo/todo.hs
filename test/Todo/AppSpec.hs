@@ -21,7 +21,7 @@ spec =
   describe "Todo.App" $ do
     describe "emptyOptions" $ do
       it "is all empty values" $ do
-        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing
+        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing False
 
       it "accesses todoTxtPath" $ do
         todoTxtPath emptyOptions `shouldBe` ""
@@ -37,6 +37,13 @@ spec =
 
       it "accesses autoAccept" $ do
         autoAccept emptyOptions `shouldBe` Nothing
+
+      it "acccess forcedPrompt" $ do
+        forcedPrompt emptyOptions `shouldBe` False
+
+    describe "initOptions" $ do
+      it "is empty with default path" $ do
+        initOptions "todo.txt" `shouldBe` Options "todo.txt" Nothing Nothing Nothing Nothing False
 
     describe "renderError" $ do
       it "displays invalid index" $ do
@@ -75,3 +82,6 @@ spec =
         let res = renderError $ EParseError err''
         res `shouldBe` "todo: parse error(s) -- \"FileName\" (line 1, column 2) Unexpected Token\nExpected Token\nError Message"
 
+      it "displays Short Circuit" $ do
+        let res = renderError $ EShortCircuit "Testing"
+        res `shouldBe` "Testing"

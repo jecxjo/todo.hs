@@ -7,4 +7,4 @@ import Todo.Commands.Helpers (todoFilePath)
 main :: IO ()
 main = do
   defaultPath <- todoFilePath
-  runApp (Options defaultPath Nothing Nothing Nothing Nothing) parseArgs
+  runApp (initOptions defaultPath) parseArgs

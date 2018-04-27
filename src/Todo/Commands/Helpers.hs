@@ -19,12 +19,14 @@ module Todo.Commands.Helpers (
     convertTaskStrings,
     readIndex,
     queryAction,
+    queryConfirm,
     getIndexTasks,
     getNotIndexTasks,
     splitIndexTasks,
     replacePending,
     replaceCompleted,
-    filterTupleDueDate
+    filterTupleDueDate,
+    shortCircuit
   ) where
 
 import qualified Control.Exception as E
@@ -184,6 +186,14 @@ queryAction' tasks str =
         f '\n' = return False  -- Special case because it prints a new line
         f _ = (liftIO $ putStrLn "") >> return False
 
+-- | Query the user, yes or no, based on args
+queryConfirm :: (AppConfig m, MonadIO m) => [Task] -> Text -> m Bool
+queryConfirm tasks str = do
+  force <- (return . forcedPrompt) =<< get
+  case force of
+    True -> queryAction tasks str -- Query the task
+    False -> return True -- Do the task
+
 getIndexTasks :: (AppError m) => Int -> [(Int, Task)] -> m [(Int, Task)]
 getIndexTasks index tasks = maybe (throwError $ EInvalidIndex index) return $ maybeFilter ((== index) . fst) tasks
 
@@ -218,3 +228,6 @@ filterTupleDueDate dueDate = filter containsDueDate
 
 iso8601 :: UTCTime -> String
 iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
+
+shortCircuit :: (AppError m) => Text -> m ()
+shortCircuit = throwError . EShortCircuit

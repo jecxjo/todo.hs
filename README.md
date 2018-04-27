@@ -4,10 +4,10 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.3.0)
+## Supported Features (0.4.0)
 
-The todo.txt file is currently hardcoded to your `$HOME` directory. The default sort is based on
-priority.
+_Note:_ Major rewrite in version 0.4, switched to an mtl style, making the code
+much cleaner. No real functional changes.
 
 **Add**
 
@@ -55,12 +55,30 @@ contain all filter options.
 
 The complete/done command will change an incomplete task to completed.
 
+*New:* Now supports the ability to complete multiple tasks at once.
+
+    $ todo list
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    3: Pay Bills +LifeProblems
+    $ todo complete 1 3
+    Pay Bills +LifeProblems
+    Pick up milk @errands
+    Complete (N/y)? y
+    Task Completed
+    $ cat todo.txt
+    2: Pick up eggs @errands
+    x 2018-04-26 Pick up milk @errands
+    x 2018-04-26 Pay Bills +LifeProblems
+
 **Delete**
 
     $ todo
     1: Do not complete this task
     2: Complete this task
     $ todo delete 1
+    Do not complete this task
+    Delete (N/y)? y
     Task Deleted
     $ todo
     1: Complete this task
@@ -71,7 +89,6 @@ The delete command removes the incomplete task from your todo.txt file. Doesn't 
 just deletes the entry.
 
 **Append/Prepend/Replace**
-
 
     $ todo
     1: Complete this

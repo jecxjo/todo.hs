@@ -59,6 +59,10 @@ process ("-y":rest) =
 process ("-n":rest) =
   modify (\st -> st { autoAccept = Just False }) >> process rest
 
+-- | Flag for forcing prompts on all modifying queries
+process ("-p":rest) =
+  modify (\st -> st { forcedPrompt = True }) >> process rest
+
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
 process ("list":filters) =
@@ -100,14 +104,14 @@ process ("add":rest) = do
   todo <- convertTaskStrings line
   allTasks <- getAllTodo
   let newList = [(0, todo)] <> allTasks
-  writeTodo newList
+  bool (shortCircuit "Nothing Added") (writeTodo newList) =<< (queryConfirm [todo] "Add")
   liftIO . putStrLn $ "ADDED: " ++ show todo
 
 -- |Delete task
 -- Command Line: delete 1 3
 process("delete":idx) = do
   (match, nonMatch) <- splitIndexTasks <$> (mapM readIndex idx) <*> getPendingTodo >>= id
-  bool (throwError $ EMiscError "No tasks were deleted") ((replacePending nonMatch) *> (liftIO $ putStrLn "Task Deleted")) =<< queryAction (map snd match) "Delete"
+  bool (throwError $ EMiscError "No tasks were deleted") ((replacePending nonMatch) *> (liftIO $ putStrLn "Task Deleted")) =<< (queryAction (map snd match) "Delete")
 
 -- |Mark Task Complete
 -- Command Line: complete 1
@@ -115,7 +119,7 @@ process ("complete":idx:[]) = do
   (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
   now <- getDay
   let completed = map (\(i, t) -> (i, Completed now t)) match
-  replacePending (nonMatch <> completed)
+  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< (queryConfirm (map (\(_,t) -> t) match) "Complete")
   liftIO $ putStrLn "Task Completed"
 
 process ("complete":idx) = do
@@ -134,7 +138,7 @@ process ("append":idx:rest) = do
     (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
     appended <- applyRest match
     let numbered = zipWith (\i t -> (i, t)) [1..] appended
-    replacePending (nonMatch <> numbered)
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm appended "Modify")
     printPrefixedTuple "Task Modified" numbered
   where
     applyRest indexedTask = mapM doRest (map snd indexedTask)
@@ -144,9 +148,9 @@ process ("append":idx:rest) = do
 -- Command Line: prepend 1 Text to add to task 1
 process ("prepend":idx:rest) = do
     (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
-    appended <- applyRest match
-    let numbered = zipWith (\i t -> (i, t)) [1..] appended
-    replacePending (nonMatch <> numbered)
+    prepended <- applyRest match
+    let numbered = zipWith (\i t -> (i, t)) [1..] prepended
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm prepended "Modify")
     printPrefixedTuple "Task Modified" numbered
   where
     applyRest indexedTask = mapM doRest (map snd indexedTask)
@@ -159,7 +163,7 @@ process ("replace":idx:rest) = do
   line <- either (throwError . EParseError) return $ validateLine . T.unpack $ T.unwords rest
   todo <- convertTaskStrings line
   let newList = [(0, todo)] <> nonMatch
-  writeTodo newList
+  bool (shortCircuit "Nothing to modify") (writeTodo newList) =<< (queryConfirm [todo] "Replace")
   liftIO . putStrLn $ "Task Replaced: " ++ show todo
 
 -- |Does a Regex find and swap with text
@@ -168,7 +172,7 @@ process ("swap":idx:oldText:newText:[]) = do
     (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
     swapped <- applySwap match
     let numbered = zipWith (\i t -> (i, t)) [1..] swapped
-    replacePending (nonMatch <> numbered)
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm swapped "Modify")
     printPrefixedTuple "Task Modified" numbered
   where
     applySwap indexedTasks = mapM doSwap (map snd indexedTasks)
@@ -182,7 +186,7 @@ process ("priority":idx:priority:[]) = do
     char <- bool (throwError $ EInvalidArg "Priority must be a letter")  (return $ T.head $ T.toUpper priority) $ T.length priority == 1
     changed <- applyPri char match
     let numbered = zipWith (\i t -> (i, t)) [1..] changed
-    replacePending (nonMatch <> numbered)
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm changed "Modify")
     printPrefixedTuple "Task Modified" numbered
   where
     applyPri char indexedTask = mapM (doPri char) (map snd indexedTask)
@@ -191,7 +195,7 @@ process ("priority":idx:priority:[]) = do
 process ("priority":idx:[]) = do
   (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
   let changed = map (\(i, Incomplete _ mDay stx) -> (i, Incomplete Nothing mDay stx)) match
-  replacePending (nonMatch <> changed)
+  bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> changed)) =<< (queryConfirm (map snd changed) "Modify")
   printPrefixedTuple "Task Modified" changed
 
 -- | List only due tasks
@@ -248,6 +252,7 @@ process ("help":_) = do
   liftIO $ putStrLn $ " -r path    Points to report file, default is $HOME/" ++ defaultReportName
   liftIO $ putStrLn " -y         Auto accept for any questions (like pressing Y)"
   liftIO $ putStrLn " -n         Auto deny for any questions (like pressing N)"
+  liftIO $ putStrLn " -p         Force prompt for all task modifying commands"
   liftIO $ putStrLn ""
   liftIO $ putStrLn "Actions:"
   liftIO $ putStrLn " add \"Task I need to do +project @context\""
