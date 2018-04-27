@@ -107,6 +107,18 @@ process ("add":rest) = do
   bool (shortCircuit "Nothing Added") (writeTodo newList) =<< (queryConfirm [todo] "Add")
   liftIO . putStrLn $ "ADDED: " ++ show todo
 
+-- |Add completed task to list
+-- Command Line: addx Example Task that is done
+process ("addx":rest) = do
+  line <- either (throwError . EParseError) return $ validateLine . T.unpack $ T.unwords rest
+  todo <- convertTaskStrings line
+  allTasks <- getAllTodo
+  now <- getDay
+  let todo' = Completed now todo
+  let newList = [(0, todo')] <> allTasks
+  writeTodo newList
+  liftIO . putStrLn $ "COMPLETED: " ++ show todo'
+
 -- |Delete task
 -- Command Line: delete 1 3
 process("delete":idx) = do
@@ -256,6 +268,7 @@ process ("help":_) = do
   liftIO $ putStrLn ""
   liftIO $ putStrLn "Actions:"
   liftIO $ putStrLn " add \"Task I need to do +project @context\""
+  liftIO $ putStrLn " addx \"Task I want to add and complete in one step\""
   liftIO $ putStrLn " list|ls +project @context"
   liftIO $ putStrLn " listpriority|lsp +prject @context"
   liftIO $ putStrLn " search|s \"regular expression\""

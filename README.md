@@ -19,6 +19,11 @@ much cleaner. No real functional changes.
 Supports the format descripted in the [todo.txt format doc][1], including priority, start date,
 contexts and projects.
 
+*New:* The command `addx` will do both an add and a complete in a single shot.
+
+    $ todo addx "An already completed task"
+    COMPLETED: An already completed task
+
 **List**
 
     $ todo list
