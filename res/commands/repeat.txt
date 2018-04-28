@@ -1,0 +1,17 @@
+Repeat an incomplete task
+
+    $ todo
+    1: Brush teeth
+    $ todo completed
+    $ todo repeat 1
+    Task repeated
+    $ todo
+    1: Brush teeth
+    $ todo completed
+    x 2018-04-28 Brush teeth
+
+Repeat creates a duplicate of the current task, and marks the original
+complete. If a timestamp exists in the current task, an updated one is written
+to the new task.
+
+Related Commands: addx

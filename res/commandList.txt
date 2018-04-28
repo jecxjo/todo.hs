@@ -29,7 +29,7 @@ Actions:
  archive
  searcharchived|sa "regular expression"
  projects
- recur
+ repeat TASKNUM
  help COMMAND
 
 Key Value Supported:

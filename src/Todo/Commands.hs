@@ -253,6 +253,16 @@ process ("projects":[]) = do
       printTuple $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == project) tasks
       liftIO $ putStrLn ""
 
+-- | Repeat a task by creating a new task and completing the original
+process ("repeat":idx:[]) = do
+  (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+  now <- getDay
+  let completed = map (\(i,t) -> (i, Completed now t)) match
+  let new = map (\(i, Incomplete pri date str) -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) date) str)) match
+  let newList = new <> nonMatch <> completed
+  bool (shortCircuit "Nothing changed") (replacePending newList) =<< (queryConfirm (map snd new) "Repeat")
+  liftIO $ putStrLn "Tasks Repeated"
+
 -- |Help output
 -- Command Line: help
 process ("usage":[]) = liftIO $ T.putStrLn usage
