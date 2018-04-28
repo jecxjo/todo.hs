@@ -1,0 +1,13 @@
+Assign a priority level to a task
+
+    $ todo
+    1: Do stuff
+    $ todo priority 1 A
+    Task modified: (A) Do Stuff
+    $ tod priority 1
+    Task modified: Do Stuff
+
+Priority can be A to Z, clearing priority by providing no argument.
+
+Alias: pri
+Related Commands: replace, listpriorty

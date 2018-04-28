@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - '-p' flag to prompt on all task changing commands
 - Added "addx" command to add completed tasks
+- Added "help" with search terms
 
 ## [0.4.0] - 2018-04-18
 ### Changed

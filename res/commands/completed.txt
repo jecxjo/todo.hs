@@ -1,0 +1,12 @@
+List all completed tasks
+
+    $ todo
+    1: Do stuff
+    2: Do more stuff
+    $ todo completed
+    x 2018-04-27 Stuff I did today
+    x 2018-04-10 Stuff I did last week
+
+This command only lists items that have not been archived yet.
+
+Related Commands: complete, archive

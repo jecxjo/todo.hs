@@ -1,0 +1,36 @@
+Usage: todo [-t path] [-s] action [task_number] [task_description]
+       todo [task_number]
+Flags:
+ -t path    Points to todo.txt, default is $HOME/todo.txt
+ -a path    Points to archive file, default is $HOME/done.txt
+ -s         Auto timestamp new tasks
+ -r path    Points to report file, default is $HOME/report.txt
+ -y         Auto accept for any questions (like pressing Y)
+ -n         Auto deny for any questions (like pressing N)
+ -p         Force prompt for all task modifying commands
+
+Actions:
+ add "Task I need to do +project @context"
+ addx "Task I want to add and complete in one step"
+ list|ls +project @context
+ listpriority|lsp +prject @context
+ search|s "regular expression"
+ delete|del|remove|rm TASKNUM
+ complete|done|do TASKNUM
+ completed
+ searchcompleted|sc "regular expression"
+ priority|pri TASKNUM NEWPRIORITY
+ version
+ append|app TASKNUM "addition to task"
+ prepend|pre TASKNUM "prepend to task"
+ replace|rep TASKNUM "text to replace"
+ swap TASKNUM "regular expression" "replacement string"
+ due
+ archive
+ searcharchived|sa "regular expression"
+ projects
+ help
+
+Key Value Supported:
+ due - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday
+ all other use defined key/value pairs viewed as text

@@ -1,0 +1,16 @@
+List priority tasks with optional search criteria
+
+    $ todo list
+    1: (A) Do @taxes
+    2: (B) Pay cell @bills
+    3: (B) Pay electric @bills
+    4: Create new budget @bills
+    $ todo listpriority @bills
+    2: (B) Pay cell @bills
+    3: (B) Pay electric @bills
+
+The list command supports optional filters for contexts and projects. List will find matches that
+contain all filter options.
+
+Alias: lsp
+Related Commands: list, search, priority

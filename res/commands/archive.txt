@@ -1,0 +1,8 @@
+Archives completed tasks.
+
+$ todo archive
+Tasks archived
+
+All completed tasks in todo.txt are moved to done.txt
+
+Related Commands: report

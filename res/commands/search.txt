@@ -1,0 +1,21 @@
+Search for tasks using regular expressions
+
+    $ todo
+    1: Example Task
+    2: Another Task
+    3: Pick up milk
+    4: Pick mike up from airport
+    $ todo search Task
+    1: Example Task
+    2: Another Task
+    $ todo search "mi(lk|ke)"
+    3: Pick up milk
+    4: Pick mike up from airport
+    $ todo search Task
+
+Regular expressions are handled by PCRE so perl regex, not POSIX. 
+
+searchcompleted returns only completed tasks matching criteria.
+
+Alias: s
+Related Commands: search, swap, searchcompleted

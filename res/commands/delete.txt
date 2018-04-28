@@ -1,0 +1,19 @@
+Delete a task from todo.txt
+
+    $ todo
+    1: Do not complete this task
+    2: Complete this task
+    $ todo delete 1
+    Do not complete this task
+    Delete (N/y)? y
+    Task Deleted
+    $ todo
+    1: Complete this task
+    $ cat todo.txt
+    Complete this task
+
+The delete command removes the incomplete task from your todo.txt file. Doesn't not mark complete,
+just deletes the entry. This task cannot be undone.
+
+Alias: del, rm
+Releated Commands: add, delete
