@@ -102,12 +102,11 @@ project = do
 context :: Parser Tasks.StringTypes
 context = do
     _ <- char '@'
-    c <- alphaNum
-    s <- many alphaNumDashDotPlusAmp
+    s <- many alphaNumDashDotPlusAmpUnder
     _ <- whiteSpace
-    return $ Tasks.SContext ([c] ++ s)
+    return $ Tasks.SContext s
   where
-    alphaNumDashDotPlusAmp = choice [alphaNum, oneOf "-.@+"]
+    alphaNumDashDotPlusAmpUnder = choice [alphaNum, oneOf "-.@+_"]
 
 -- |Key Value Pair: key:value
 kvstring :: Parser Tasks.StringTypes

@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7a7dec5a96273d3e02470fe2ab7d62ff8d4d89aa4e4570f69bb5348e0a7b5ab2
+-- hash: 2b0d14496a5eb2a1d91a4873fa8a343c44e69e1b2107331d0ae43ba249522586
 
 name:           todo
-version:        0.4.0.2
+version:        0.4.1.0
 synopsis:       A todo.txt cli implementation in haskell
 description:    Please see the README on Github at <https://github.com/jecxjo/todo.hs#readme>
 category:       Productivity

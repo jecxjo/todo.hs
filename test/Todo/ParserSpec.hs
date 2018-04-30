@@ -67,6 +67,9 @@ spec =
       it "Matches @foo+baz@bar-quux.com" $ do
         parse P.context "" "@foo+baz@bar-quux.com" `shouldBe` Right (T.SContext "foo+baz@bar-quux.com")
 
+      it "Matches @@call" $ do
+        parse P.context "" "@@call" `shouldBe` Right (T.SContext "@call")
+
     describe "Key Value Pair" $ do
       it "Matches foo:bar" $ do
         parse P.keyvalue "" "foo:bar" `shouldBe` Right (T.SKeyValue $ T.KVString "foo" "bar")
