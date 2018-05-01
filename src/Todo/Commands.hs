@@ -116,7 +116,7 @@ process ("addx":rest) = do
   now <- getDay
   let todo' = Completed now todo
   let newList = [(0, todo')] <> allTasks
-  writeTodo newList
+  bool (shortCircuit "Nothing Completed") (writeTodo newList) =<< (queryConfirm [todo] "Complete")
   liftIO . putStrLn $ "COMPLETED: " ++ show todo'
 
 -- |Delete task
