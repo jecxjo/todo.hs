@@ -18,6 +18,7 @@ import           Data.Version (showVersion)
 import           Paths_todo (version)
 import           Todo.App
 import           Todo.Commands.Helpers
+import           Todo.HelpInfo
 import           Todo.Parser
 import           Todo.Tasks
 import           Todo.RegEx (matchGen, swapGen, swapAllGen)
@@ -252,45 +253,21 @@ process ("projects":[]) = do
       printTuple $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == project) tasks
       liftIO $ putStrLn ""
 
+-- | Repeat a task by creating a new task and completing the original
+process ("repeat":idx:[]) = do
+  (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+  now <- getDay
+  let completed = map (\(i,t) -> (i, Completed now t)) match
+  let new = map (\(i, Incomplete pri date str) -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) date) str)) match
+  let newList = new <> nonMatch <> completed
+  bool (shortCircuit "Nothing changed") (replacePending newList) =<< (queryConfirm (map snd new) "Repeat")
+  liftIO $ putStrLn "Tasks Repeated"
+
 -- |Help output
 -- Command Line: help
-process ("help":_) = do
-  liftIO $ putStrLn "Usage: todo [-t path] [-s] action [task_number] [task_description]"
-  liftIO $ putStrLn "       todo [task_number]"
-  liftIO $ putStrLn "Flags:"
-  liftIO $ putStrLn $ " -t path    Points to todo.txt, default is $HOME/" ++ defaultTodoName
-  liftIO $ putStrLn $ " -a path    Points to archive file, default is $HOME/" ++ defaultArchiveName
-  liftIO $ putStrLn " -s         Auto timestamp new tasks"
-  liftIO $ putStrLn $ " -r path    Points to report file, default is $HOME/" ++ defaultReportName
-  liftIO $ putStrLn " -y         Auto accept for any questions (like pressing Y)"
-  liftIO $ putStrLn " -n         Auto deny for any questions (like pressing N)"
-  liftIO $ putStrLn " -p         Force prompt for all task modifying commands"
-  liftIO $ putStrLn ""
-  liftIO $ putStrLn "Actions:"
-  liftIO $ putStrLn " add \"Task I need to do +project @context\""
-  liftIO $ putStrLn " addx \"Task I want to add and complete in one step\""
-  liftIO $ putStrLn " list|ls +project @context"
-  liftIO $ putStrLn " listpriority|lsp +prject @context"
-  liftIO $ putStrLn " search|s \"regular expression\""
-  liftIO $ putStrLn " delete|del|remove|rm TASKNUM"
-  liftIO $ putStrLn " complete|done|do TASKNUM"
-  liftIO $ putStrLn " completed"
-  liftIO $ putStrLn " searchcompleted|sc \"regular expression\""
-  liftIO $ putStrLn " priority|pri TASKNUM NEWPRIORITY"
-  liftIO $ putStrLn " version"
-  liftIO $ putStrLn " append|app TASKNUM \"addition to task\""
-  liftIO $ putStrLn " prepend|pre TASKNUM \"prepend to task\""
-  liftIO $ putStrLn " replace|rep TASKNUM \"text to replace\""
-  liftIO $ putStrLn " swap TASKNUM \"regular expression\" \"replacement string\""
-  liftIO $ putStrLn " due"
-  liftIO $ putStrLn " archive"
-  liftIO $ putStrLn " searcharchived|sa \"regular expression\""
-  liftIO $ putStrLn " projects"
-  liftIO $ putStrLn " help"
-  liftIO $ putStrLn ""
-  liftIO $ putStrLn "Key Value Supported:"
-  liftIO $ putStrLn " due - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday"
-  liftIO $ putStrLn " all other use defined key/value pairs viewed as text"
+process ("usage":[]) = liftIO $ T.putStrLn usage
+process ("help":rest:[]) = liftIO $ T.putStrLn $ commandHelp rest
+process ("help":[]) = liftIO $ T.putStrLn commandList
 
 -- | Show Version
 -- Command Line: version
@@ -308,8 +285,8 @@ process ("pri":rest) = process ("priority":rest)
 process ("sc":rest) = process ("searchcompleted":rest)
 process ("sa":rest) = process ("searcharchived":rest)
 process ("lsp":rest) = process ("listpriority":rest)
-process ("-h":rest) = process ("help":[])
-process ("--help":rest) = process ("help":[])
+process ("-h":rest) = process ("help":rest)
+process ("--help":rest) = process ("help":rest)
 process ("app":rest) = process("append":rest)
 process ("pre":rest) = process("prepend":rest)
 process ("rep":rest) = process("replace":rest)

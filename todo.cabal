@@ -2,10 +2,10 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5610cc08571227a53c554bf92cdaf7ce4c6813913f313f05cda9866828e74781
+-- hash: 0ac83dc412136b4d70197553358fc4406ccd945279d728380f894e96884b5813
 
 name:           todo
-version:        0.4.1.1
+version:        0.4.2.0
 synopsis:       A todo.txt cli implementation in haskell
 description:    Please see the README on Github at <https://github.com/jecxjo/todo.hs#readme>
 category:       Productivity
@@ -33,8 +33,10 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , directory
     , errors
+    , file-embed
     , filepath
     , monad-control
     , mtl
@@ -44,12 +46,14 @@ library
     , time
     , transformers
   exposed-modules:
+      App.Resources
       Control.Monad.Arguments
       Control.Monad.Date
       Control.Monad.FileSystem
       Todo.App
       Todo.Commands
       Todo.Commands.Helpers
+      Todo.HelpInfo
       Todo.Parser
       Todo.RegEx
       Todo.Tasks
@@ -65,8 +69,10 @@ executable todo
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , directory
     , errors
+    , file-embed
     , filepath
     , monad-control
     , mtl
@@ -88,8 +94,10 @@ test-suite todo-test
   ghc-options: -Wall
   build-depends:
       base >=4.7 && <5
+    , bytestring
     , directory
     , errors
+    , file-embed
     , filepath
     , hspec
     , monad-control

@@ -1,0 +1,20 @@
+Complete a task.
+
+    $ todo list
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    3: Pay Bills +LifeProblems
+    $ todo complete 2
+    Task Completed
+    $ todo list
+    1: Pick up milk @errands
+    2: Pay Bills +LifeProblems
+    $ cat todo.txt
+    Pick up milk @errands
+    Pay Bills +LifeProblems
+    x 2016-07-30 Pick up eggs @errands
+
+The complete/done command will change an incomplete task to completed.
+
+Alias: do, done
+Related Commands: add, addx, completed

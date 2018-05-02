@@ -1,0 +1,16 @@
+Add a task to todo.txt
+
+    $ todo add "Complete an example task +TodoExample"
+    New Task: Complete an example task
+    $ todo add "Do your homework by due:tomorrow"
+    New Task: Do your homework by due:2017-04-05
+
+When creating a task, due dates can be assigned directly or with relative terms:
+
+    $ todo add "Task due:2019-05-04"
+    $ todo add "Task due:tomorrow"
+    $ todo add "Task due:friday"
+
+Supported relative dates: today, yesterday, tomorrow, monday - sunday.
+
+Related Commands: addx, complete, due

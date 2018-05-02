@@ -1,0 +1,10 @@
+Replace a task with a new task
+
+    $ todo
+    1: Do nothing today
+    $ todo replace 1 "Do stuff tomorrow"
+    Updated Task: Do stuff tomorrow
+    $ todo
+    1: Do stuff tomorrow
+
+Related Commands: append, prepend, swap

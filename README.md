@@ -42,6 +42,8 @@ contexts and projects.
 The list command supports optional filters for contexts and projects. List will find matches that
 contain all filter options.
 
+The `listpriorty` command is the same as list, filtering for only tasks with priorities.
+
 **Complete**
 
     $ todo list

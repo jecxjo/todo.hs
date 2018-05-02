@@ -1,0 +1,22 @@
+Find text and replace it using regular expressions.
+
+    $ todo
+    1: Pick mike up from airport
+    $ todo swap "mike up" "up Mike"
+    Updated Task: Pick up Mike from airport
+
+You can even use indexed groups.
+
+    $ todo
+    1: Pick up Mike from airport
+    $ todo swap "(Mike)" "@\1"
+    Updated Task: Pick up @Mike from airport
+
+Or change due dates.
+
+    $ todo
+    1: Pick up milk due:2017-06-14
+    $ todo swap 1 "due:.*" "due:tomorrow"
+    Updated Task: Pick up milk due:2017-06-15
+
+Related Commands: append, prepend, replace, search

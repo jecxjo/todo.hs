@@ -1,0 +1,15 @@
+Lists all tasks in groups based on project
+
+    $ todo add "Pay water bills +Home"
+    $ todo add "Pay electric bills +Home"
+    $ todo add "Add help to +todo"
+    $ todo projects
+    ==== +Home ====
+    1: Pay water bills +Home
+    2: Pay electric bills +Home
+
+    ==== +todo ====
+    3: Add help to +todo
+
+If tasks have multiple projects, or are part of subprojects (+Project.SubProject)
+they show up in multiple groups.

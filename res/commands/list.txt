@@ -1,0 +1,20 @@
+List tasks based on optional search criteria
+
+    $ todo list
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    3: Pay Bills +LifeProblems
+    4: Pick up dog from vet
+    $ todo ls "Pick up"
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    4: Pick up dog from vet
+    $ todo ls "Pick up" @errands
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+
+The list command supports optional filters for contexts and projects. List will find matches that
+contain all filter options.
+
+Alias: ls
+Related Commands: listpriority, search, completed, searchcompleted

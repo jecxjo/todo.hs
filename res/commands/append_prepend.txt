@@ -1,0 +1,12 @@
+Append or Prepend text to a current task.
+
+    $ todo
+    1: Complete this
+    $ todo append 1 "task tomorrow"
+    Updated Task: Complete this task tomorrow
+    $ todo prepend 1 "IMPORTANT"
+    Updated Task: IMPORTANT Complete this task tomorrow
+    $ todo
+    1: IMPORTANT Complete this task tomorrow
+
+Related Command: append, prepend, replace, swap

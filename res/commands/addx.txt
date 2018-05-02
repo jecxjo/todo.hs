@@ -1,0 +1,6 @@
+Add and complete a task
+
+    $ todo addx "An already completed task"
+    COMPLETED: An already completed task
+
+Related Commands: add, complete, repeat
