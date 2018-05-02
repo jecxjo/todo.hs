@@ -44,5 +44,8 @@ commandHelp "projects" = fn "commands/projects.txt"
 commandHelp "help" = fn "commands/help.txt"
 commandHelp "usage" = fn "commands/help.txt"
 commandHelp "swap" = fn "commands/swap.txt"
+commandHelp "repeat" = fn "commands/repeat.txt"
+
+commandHelp "todo.txt" = fn "todo.txt"
 
 commandHelp cmd = "Unknown Command: " <> cmd <> "\n" <> commandList

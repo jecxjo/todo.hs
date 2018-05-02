@@ -2,4 +2,4 @@ Info about commands
 
     $ todo usage
     $ todo help
-    $ todo help add
+    $ todo help <command name>
