@@ -31,6 +31,8 @@ Actions:
  projects
  repeat TASKNUM
  help COMMAND
+ license
+ changelog
 
 Key Value Supported:
  due - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday

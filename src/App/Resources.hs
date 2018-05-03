@@ -1,6 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module App.Resources ( getResource, listResources ) where
+module App.Resources (
+    getResource,
+    listResources,
+    getChangeLog,
+    getLicense
+  ) where
 
 import qualified Data.ByteString as BS
 import           Data.FileEmbed
@@ -16,3 +21,15 @@ getResource path = fmap decodeUtf8 $ lookup path resources
 
 listResources :: [FilePath]
 listResources = map fst resources
+
+changelog :: BS.ByteString
+changelog = $(embedFile "CHANGELOG.md")
+
+getChangeLog :: Text
+getChangeLog = decodeUtf8 changelog
+
+license :: BS.ByteString
+license = $(embedFile "LICENSE")
+
+getLicense :: Text
+getLicense = decodeUtf8 license

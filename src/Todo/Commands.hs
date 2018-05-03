@@ -273,6 +273,14 @@ process ("help":[]) = liftIO $ T.putStrLn commandList
 -- Command Line: version
 process ("version":[]) = liftIO . putStrLn $ "Version: " ++ showVersion version
 
+-- | Show license
+-- Command Line: license
+process ("license":[]) = liftIO $ T.putStrLn license
+
+-- | Show changelog
+-- Command Line: changelog
+process ("changelog":[]) = liftIO $ T.putStrLn changelog
+
 -- | Aliases
 process ("remove":rest) = process ("delete":rest)
 process ("del":rest) = process ("delete":rest)

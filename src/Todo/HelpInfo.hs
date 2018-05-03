@@ -3,7 +3,9 @@
 module Todo.HelpInfo (
   usage,
   commandList,
-  commandHelp
+  commandHelp,
+  license,
+  changelog
   ) where
 
 import           App.Resources
@@ -17,7 +19,6 @@ fn path = maybe "Missing Resource" id (getResource $ T.unpack path)
 
 usage :: Text
 usage = fn "usage.txt"
-
 
 commandList :: Text
 commandList = fn "commandList.txt"
@@ -43,9 +44,17 @@ commandHelp "searcharchived" = fn "commands/search.txt"
 commandHelp "projects" = fn "commands/projects.txt"
 commandHelp "help" = fn "commands/help.txt"
 commandHelp "usage" = fn "commands/help.txt"
+commandHelp "license" = fn "commands/help.txt"
+commandHelp "changelog" = fn "commands/help.txt"
 commandHelp "swap" = fn "commands/swap.txt"
 commandHelp "repeat" = fn "commands/repeat.txt"
 
 commandHelp "todo.txt" = fn "todo.txt"
 
 commandHelp cmd = "Unknown Command: " <> cmd <> "\n" <> commandList
+
+license :: Text
+license = getLicense
+
+changelog :: Text
+changelog = getChangeLog
