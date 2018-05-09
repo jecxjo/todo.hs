@@ -124,8 +124,15 @@ kvduedate = try $ do
   _ <- whiteSpace
   return . Tasks.SKeyValue $ Tasks.KVDueDate d
 
+kvthreshold :: Parser Tasks.StringTypes
+kvthreshold = try $ do
+  _ <- string "t:"
+  d <- date
+  _ <- whiteSpace
+  return . Tasks.SKeyValue $ Tasks.KVThreshold d
+
 keyvalue :: Parser Tasks.StringTypes
-keyvalue = choice [ kvduedate, kvstring ]
+keyvalue = choice [ kvduedate, kvthreshold, kvstring ]
 
 -- |Other string content
 -- This parser removes any spacess and newlines from beginning.

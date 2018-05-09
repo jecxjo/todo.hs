@@ -26,7 +26,8 @@ module Todo.Commands.Helpers (
     replacePending,
     replaceCompleted,
     filterTupleDueDate,
-    shortCircuit
+    shortCircuit,
+    filterThreshold
   ) where
 
 import qualified Control.Exception as E
@@ -37,7 +38,7 @@ import           Data.Semigroup ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Text (Text)
-import           Data.Time.Calendar (Day(..))
+import           Data.Time.Calendar (Day(..), diffDays)
 import           Data.Time.Clock(UTCTime(..))
 import           Data.Time.Format (formatTime, defaultTimeLocale)
 import           Prelude hiding (readFile, writeFile, appendFile)
@@ -231,3 +232,11 @@ iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
 
 shortCircuit :: (AppError m) => Text -> m ()
 shortCircuit = throwError . EShortCircuit
+
+filterThreshold :: (MonadDate m, MonadIO m) => [(Int, Task)] -> m [(Int, Task)]
+filterThreshold lst = do
+  now <- getDay
+  return $ filter (\(i, t) -> case t of
+                                Completed _ _ -> True
+                                Incomplete _ _ str -> do
+                                  maybe True (<= now) (extractThreshold str)) lst

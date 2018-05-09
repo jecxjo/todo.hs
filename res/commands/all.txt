@@ -1,0 +1,6 @@
+List all tasks
+
+    $ todo all
+    1: Pick up milk @Groceries
+    2: Pay next year's taxes t:2019-01-01 due:2019-04-15
+    3: Pay last year's taxes t:2017-01-01 due:2017-04-15

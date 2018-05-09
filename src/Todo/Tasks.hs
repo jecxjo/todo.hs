@@ -17,6 +17,7 @@ module Todo.Tasks
   , getContexts
   , getKeyValues
   , extractDueDate
+  , extractThreshold
   ) where
 
 import           Control.Monad (liftM)
@@ -42,11 +43,13 @@ type Context = String
 
 -- |Key Value pairs: due:2017-01-02
 data KeyValue = KVDueDate Day
+              | KVThreshold Day
               | KVString String String
               deriving (Eq)
 
 instance Show KeyValue where
   show (KVDueDate date) = "due:" ++ (show date)
+  show (KVThreshold date) = "t:" ++ (show date)
   show (KVString key value) = key ++ ":" ++ value
 
 
@@ -86,6 +89,11 @@ extractDueDate [] = Nothing
 extractDueDate ((SKeyValue (KVDueDate d)):_) = Just d
 extractDueDate (_:xs) = extractDueDate xs
 
+extractThreshold :: [StringTypes] -> Maybe Day
+extractThreshold [] = Nothing
+extractThreshold ((SKeyValue (KVThreshold d)):_) = Just d
+extractThreshold (_:xs) = extractThreshold xs
+
 -- |Data type to store both incomplete and completed tasks.
 data Task = Incomplete (Maybe Priority) (Maybe Day) [StringTypes]
           | Completed Day Task
@@ -116,8 +124,8 @@ instance Ord Task where
   compare (Incomplete Nothing _ _) (Incomplete Nothing _ _) = EQ
   compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = LT
   compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = GT
-  compare (Incomplete _ _ _) (Completed _ _) = GT
-  compare (Completed _ _) (Incomplete _ _ _) = LT
+  compare (Incomplete _ _ _) (Completed _ _) = LT
+  compare (Completed _ _) (Incomplete _ _ _) = GT
   compare (Incomplete (Just a) _ _) (Incomplete (Just b) _ _) =
     compare a b
   compare (Completed _ t1) (Completed _ t2) = compare t1 t2
@@ -172,6 +180,9 @@ convertStringType (SKeyValue kv) = do
       KVString "due" val -> do
         converted <- convertToDate val
         return . SKeyValue $ KVDueDate converted
+      KVString "t" val -> do
+        converted <- convertToDate val
+        return . SKeyValue $ KVThreshold converted
       rest ->  do
         return $ SKeyValue rest
 convertStringType rest = do

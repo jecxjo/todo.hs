@@ -3,7 +3,7 @@
 module Todo.HelpInfo (
   usage,
   commandList,
-  commandHelp,
+  helpTopics,
   license,
   changelog
   ) where
@@ -23,35 +23,39 @@ usage = fn "usage.txt"
 commandList :: Text
 commandList = fn "commandList.txt"
 
-commandHelp :: Text -> Text
-commandHelp "add" = fn "commands/add.txt"
-commandHelp "addx" = fn "commands/addx.txt"
-commandHelp "append" = fn "commands/append_prepend.txt"
-commandHelp "prepend" = fn "commands/append_prepend.txt"
-commandHelp "archive" = fn "commands/archive.txt"
-commandHelp "complete" = fn "commands/complete.txt"
-commandHelp "completed" = fn "commands/completed.txt"
-commandHelp "delete" = fn "commands/delete.txt"
-commandHelp "list" = fn "commands/list.txt"
-commandHelp "listpriority" = fn "commands/listpriority.txt"
-commandHelp "priority" = fn "commands/priority.txt"
-commandHelp "replace" = fn "commands/replace.txt"
-commandHelp "search" = fn "commands/search.txt"
-commandHelp "searchcompleted" = fn "commands/search.txt"
-commandHelp "version" = fn "commands/version.txt"
-commandHelp "due" = fn "commands/due.txt"
-commandHelp "searcharchived" = fn "commands/search.txt"
-commandHelp "projects" = fn "commands/projects.txt"
-commandHelp "help" = fn "commands/help.txt"
-commandHelp "usage" = fn "commands/help.txt"
-commandHelp "license" = fn "commands/help.txt"
-commandHelp "changelog" = fn "commands/help.txt"
-commandHelp "swap" = fn "commands/swap.txt"
-commandHelp "repeat" = fn "commands/repeat.txt"
+helpTopics :: Text -> Text
+helpTopics "add" = fn "commands/add.txt"
+helpTopics "addx" = fn "commands/addx.txt"
+helpTopics "all" = fn "commands/all.txt"
+helpTopics "append" = fn "commands/append_prepend.txt"
+helpTopics "prepend" = fn "commands/append_prepend.txt"
+helpTopics "archive" = fn "commands/archive.txt"
+helpTopics "complete" = fn "commands/complete.txt"
+helpTopics "completed" = fn "commands/completed.txt"
+helpTopics "delete" = fn "commands/delete.txt"
+helpTopics "list" = fn "commands/list.txt"
+helpTopics "listpriority" = fn "commands/listpriority.txt"
+helpTopics "priority" = fn "commands/priority.txt"
+helpTopics "replace" = fn "commands/replace.txt"
+helpTopics "search" = fn "commands/search.txt"
+helpTopics "seachall" = fn "commands/seach.txt"
+helpTopics "searchcompleted" = fn "commands/search.txt"
+helpTopics "version" = fn "commands/version.txt"
+helpTopics "due" = fn "commands/due.txt"
+helpTopics "searcharchived" = fn "commands/search.txt"
+helpTopics "projects" = fn "commands/projects.txt"
+helpTopics "help" = fn "commands/help.txt"
+helpTopics "usage" = fn "commands/help.txt"
+helpTopics "license" = fn "commands/help.txt"
+helpTopics "changelog" = fn "commands/help.txt"
+helpTopics "swap" = fn "commands/swap.txt"
+helpTopics "repeat" = fn "commands/repeat.txt"
 
-commandHelp "todo.txt" = fn "todo.txt"
+helpTopics "todo.txt" = fn "topics/todo.txt"
+helpTopics "duedate" = fn "topics/duedate.txt"
+helpTopics "threshold" = fn "topics/threshold.txt"
 
-commandHelp cmd = "Unknown Command: " <> cmd <> "\n" <> commandList
+helpTopics cmd = "Unknown Command: " <> cmd <> "\n" <> commandList
 
 license :: Text
 license = getLicense

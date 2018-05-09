@@ -33,7 +33,7 @@ parseArgs = getArgs >>= process
 process :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadDate m) => [Text] -> m ()
 
 -- | No args -> Print todo list
-process [] = getPendingTodo >>= printTuple
+process [] = getPendingTodo >>= filterThreshold >>= printTuple
 
 -- | Flag for passing in the location of the todo.txt file
 process ("-t":path:rest) =
@@ -64,16 +64,25 @@ process ("-n":rest) =
 process ("-p":rest) =
   modify (\st -> st { forcedPrompt = True }) >> process rest
 
+-- | List all entries, ignoring thresholds
+-- Command Line: all "string to match" +Project @Context
+process ("all":filters) =
+  getAllTodo >>=
+  (return . filter (containsText filters . snd)) >>=
+  printTuple
+
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
 process ("list":filters) =
   getPendingTodo >>=
+  filterThreshold >>=
   (return . filter (containsText filters . snd)) >>=
   printTuple
 
 -- |List priority entries with project and context filters
 process ("listpriority":filters) =
     getPendingTodo >>=
+    filterThreshold >>=
     (return . filter (onlyPriority . snd)) >>=
     (return . filter (containsText filters . snd)) >>=
     printTuple
@@ -84,6 +93,15 @@ process ("listpriority":filters) =
 -- |search for tasks matching regex
 process ("search":filters) =
     getPendingTodo >>=
+    filterThreshold >>=
+    (return . filter (matchFn . show . snd)) >>=
+    printTuple
+  where
+    matchFn = matchGen $ T.unpack $ T.unwords filters
+
+-- | Search for tasks matching regex ignoring threshold
+process ("searchall":filters) =
+    getAllTodo >>=
     (return . filter (matchFn . show . snd)) >>=
     printTuple
   where
@@ -266,7 +284,7 @@ process ("repeat":idx:[]) = do
 -- |Help output
 -- Command Line: help
 process ("usage":[]) = liftIO $ T.putStrLn usage
-process ("help":rest:[]) = liftIO $ T.putStrLn $ commandHelp rest
+process ("help":rest:[]) = liftIO $ T.putStrLn $ helpTopics rest
 process ("help":[]) = liftIO $ T.putStrLn commandList
 
 -- | Show Version

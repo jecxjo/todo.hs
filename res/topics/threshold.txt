@@ -1,0 +1,31 @@
+Threshold
+---------
+
+Todo.txt supports delaying tasks using the thresholds addon. Supplying a
+threshold, the tasks will not show up in your list until the day of the
+threshold. Thresholds are denoted using the key "t", dates are stored in the
+format YYYY-MM-DD.
+
+    (A) Pay taxes t:2018-01-01 due:2018-04-17
+
+The following task will not be visible until Jan 1st, 2018 and is due on April
+17 of the same year.
+
+When using any commands to list or search for tasks, the task ID will be
+consumed for tasks not past their threshold, but will not be visible.
+
+    $ todo
+    1: Pick up milk @Groceries
+    3: Pay last year's taxes t:2017-01-01 due:2017-04-15
+
+Using the "all" command you can search while ignoring thresholds.
+
+    $ todo all
+    1: Pick up milk @Groceries
+    2: Pay next year's taxes t:2019-01-01 due:2019-04-15
+    3: Pay last year's taxes t:2017-01-01 due:2017-04-15
+
+Using the "searchall" command you can perform a regular expression search,
+while ignoring thresholds.
+
+Related Topics: duedate, all, searchall

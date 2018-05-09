@@ -80,6 +80,9 @@ spec =
       it "Matches due:2017-03-13" $ do
         parse P.keyvalue "" "due:2017-03-13" `shouldBe` Right (T.SKeyValue $ T.KVDueDate (fromGregorian 2017 3 13))
 
+      it "Matches t:2018-05-03" $ do
+        parse P.keyvalue "" "t:2018-05-03" `shouldBe` Right (T.SKeyValue $ T.KVThreshold (fromGregorian 2018 5 3))
+
     describe "Other Strings" $ do
       it "Matches Other123" $ do
         parse P.other "" "Other123" `shouldBe` Right (T.SOther "Other123")

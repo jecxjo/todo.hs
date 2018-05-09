@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Added "license" and "changelog" commands, prints relative files
+- Added threshold support
 
 ## [0.4.2] - 2018-05-02
 ### Added

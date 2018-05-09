@@ -12,9 +12,11 @@ Flags:
 Actions:
  add "Task I need to do +project @context"
  addx "Task I want to add and complete in one step"
- list|ls +project @context
+ all +project @context "text in task"
+ list|ls +project @context "text in task"
  listpriority|lsp +prject @context
  search|s "regular expression"
+ searchall "regular expression"
  delete|del|remove|rm TASKNUM
  complete|done|do TASKNUM
  completed
@@ -35,7 +37,12 @@ Actions:
  changelog
 
 Key Value Supported:
- due - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday
- all other use defined key/value pairs viewed as text
+  Keys:
+    due - Due date, see help due
+    t - Threashold, see help threshold
+
+  Values:
+    date - YYYY-MM-DD or today, tomorrow, yesterday, monday..sunday
+    all other use defined key/value pairs viewed as text
 
 For info on the format itself, try "help todo.txt"

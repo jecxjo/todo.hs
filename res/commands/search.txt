@@ -13,9 +13,11 @@ Search for tasks using regular expressions
     4: Pick mike up from airport
     $ todo search Task
 
-Regular expressions are handled by PCRE so perl regex, not POSIX. 
+Regular expressions are handled by PCRE so perl regex, not POSIX.
 
-searchcompleted returns only completed tasks matching criteria.
+'searchcompleted' returns only completed tasks matching criteria.
+
+'searchall' returns all tasks, incomplete, completed and ignores thresholds.
 
 Alias: s
-Related Commands: search, swap, searchcompleted
+Related Commands: search, swap, searchcompleted, searchall

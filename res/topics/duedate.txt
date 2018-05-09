@@ -1,0 +1,15 @@
+Due Date
+--------
+
+Todo.txt supports due dates via the "due" key/value pair. Dates are stored in
+the format YYYY-MM-DD.
+
+    (A) Pay taxes due:2018-04-17
+
+When creating a task either enter the exact due date, or use relative dates:
+
+    - yesterday, today, tomorrow
+    - monday ... sunday (also supports 3 letter abbreviations e.g. mon)
+
+Related Topics: threshold, due
+
