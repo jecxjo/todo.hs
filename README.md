@@ -1,6 +1,8 @@
 # todo.hs
 A haskell implementation of todo.txt
 
+[![Build Status](https://travis-ci.org/jecxjo/todo.hs.svg?branch=master)](https://travis-ci.org/jecxjo/todo.hs)
+
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
