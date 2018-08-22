@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added "license" and "changelog" commands, prints relative files
 - Added threshold support
 
+### Changed
+- Cleaned up compile time warnings
+- Fixed bug (temporarily) in Control.Monad.TestFixture, pointing at changes until upstream publishes
+- Requires stack version >= 1.7
+
 ## [0.4.2] - 2018-05-02
 ### Added
 - Added "help" with search terms
