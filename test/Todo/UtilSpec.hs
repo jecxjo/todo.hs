@@ -52,17 +52,17 @@ spec =
 
     describe "digitCount" $ do
       it "Calculates multiple digit positive numbers" $ do
-          (map digitCount [0, 1, 12, 123, 1234, 12345, 123456, 1234567, 12345678, 123456789, 1234567890]) `shouldBe` [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+          (map digitCount [0, 1, 12, 123, 1234, 12345, 123456, 1234567, 12345678, 123456789, 1234567890])  `shouldBe` [1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
       it "Calculates multiple digit negative numbers" $ do
-          (map digitCount [(-1), (-12), (-123), (-1234), (-12345), (-123456), (-1234567), (-12345678), (-123456789), (-1234567890)]) `shouldBe` [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+          (map digitCount [(-1), (-12), (-123), (-1234), (-12345), (-123456), (-1234567), (-12345678), (-123456789), (-1234567890)]) `shouldBe` ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] :: [Integer])
 
     describe "showPaddedNumber" $ do
       it "Adds white space when too small" $ do
         showPaddedNumber 10 123 `shouldBe` "       123"
 
       it "fits size when too big" $ do
-        showPaddedNumber 1 123 `shouldBe` "123"
+        showPaddedNumber 1 123 `shouldBe` ("123" :: String)
 
     describe "notEmpty" $ do
       let fn :: [Int] -> Int
@@ -76,25 +76,25 @@ spec =
 
     describe "maybeFilter" $ do
       it "returns nothing when nothing is filtered" $ do
-        maybeFilter even [1,3,5] `shouldBe` Nothing
+        maybeFilter even [1,3,5] `shouldBe` (Nothing :: Maybe [Int])
 
       it "returns nothing when nothing is filtered" $ do
-        maybeFilter even [2,3,4] `shouldBe` Just [2,4]
+        maybeFilter even [2,3,4] `shouldBe` (Just [2,4] :: Maybe [Int])
 
     describe "maybeToEither" $ do
       it "returns left on nothing" $ do
-        maybeToEither "error case" (Nothing :: Maybe Int) `shouldBe` Left "error case"
+        maybeToEither "error case" (Nothing :: Maybe Int) `shouldBe` (Left "error case" :: Either String Int)
 
       it "returns left on nothing" $ do
-        maybeToEither "error case" (Just 1 :: Maybe Int) `shouldBe` (Right 1)
+        maybeToEither "error case" (Just 1 :: Maybe Int) `shouldBe` (Right 1 :: Either String Int)
 
     describe "replace" $ do
       it "returns an empty list when an empty list" $ do
-        replace 1 2 [] `shouldBe` []
+        replace 1 2 [] `shouldBe` ([] :: [Int])
 
       it "returns a list with no changes when no matches" $ do
-        replace 1 2 [3,4,5] `shouldBe` [3,4,5]
+        replace 1 2 [3,4,5] `shouldBe` ([3,4,5] :: [Int])
 
       it "returns a list with no changes when no matches" $ do
-        replace 1 2 [1,4,1] `shouldBe` [2,4,2]
+        replace 1 2 [1,4,1] `shouldBe` ([2,4,2] :: [Int])
 

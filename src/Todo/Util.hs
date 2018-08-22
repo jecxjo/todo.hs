@@ -50,15 +50,16 @@ readChar = do
   return c
 
 -- |Calculate the number of digits
-digitCount :: (Num a, Integral t) => t -> a
+digitCount :: Int -> Integer
 digitCount x
     | x < 0 = digitCount $ abs x
     | x < 10 = 1
     | otherwise = 1 + digitCount ((x - (x `mod` 10)) `div` 10)
 
 -- |Show Number with padding
+showPaddedNumber :: Int -> Int -> String
 showPaddedNumber width number =
-  (take (width - (digitCount number)) $ repeat ' ') ++ show number
+  (take (width - (fromIntegral $ digitCount number)) $ repeat ' ') ++ show number
 
 -- | Similar to maybe and bool, the notEmpty applies a function on a non-empty list
 notEmpty :: b -> ([a] -> b) -> [a] -> b

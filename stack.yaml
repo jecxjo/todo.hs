@@ -37,6 +37,10 @@ resolver: lts-11.1
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - .
+
+extra-deps:
+- github: jecxjo/test-fixture
+  commit: 63446eabefc9211c4a4e7312ab138f7d310960f2
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 # extra-deps: []
