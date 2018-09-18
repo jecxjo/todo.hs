@@ -1,0 +1,33 @@
+Recurring Tasks
+---------------
+
+As an "add-on" feature, Todo.txt can support recurring tasks. Configuration is
+stored in recur.txt with the following format:
+
+    <recur period> <recur options> - <task>
+
+The recur period can be one of the following:
+
+    daily - Runs every day, options being the number of days between
+    weekly - Runs every week, options day of the week, number of weeks between
+    monthly - Runs every month, options day of the month, number of months between
+
+Each recurring event can also have a start date, signified by preceiding the
+recur period with @YYYY-MM-DD.
+
+Example configuration
+
+    daily - (A) Run this task daily
+    daily 2 - (B) Run this task every other day
+    @2018-10-20 daily 2 - Run this task every other day starting on 2018-10-20
+
+    weekly friday sun - Runs every week, friday and sunday
+    weekly 3 on monday - Runs every 3rd week, on monday
+
+    monthly 1, 15 - Runs every month, on the 1st and 15th
+    monthly 6 on 30 - Runs every 6 months, on the 30th
+
+    yearly 100 - Runs on the 100th day of the year
+    yearly 5 on 1 - Runs every 5th year, on the 1st day
+
+Related Topics: recur

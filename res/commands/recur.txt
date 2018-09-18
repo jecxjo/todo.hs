@@ -1,0 +1,32 @@
+Recurring Task Commands
+
+    $ todo recur add "daily - (A) Do this task daily"
+    $ todo recur list
+    1: daily - (A) Do this task daily
+    $ todo recur
+    $ todo
+    1: (A) Do this task daily
+
+== Command: recur
+Triggers the generation of tasks based on the contents of recur.txt
+
+This task should be run once a day, by a cron job or scheduler.
+
+== Command: recur list
+Returns a list of all recuring tasks
+
+== Command: recur add
+Adds an entry to recur.txt
+
+The argument passed is a string consisting of
+
+    <recur period> <recur options> - <task>
+
+== Command: recur rm
+Removes a recuring event from recur.txt
+
+The argument passed is the recurring task number, found by calling
+
+    todo recur list
+
+Related Topics: recurring_tasks

@@ -35,6 +35,7 @@ Actions:
  help COMMAND
  license
  changelog
+ recur | recur add TASK | recur list | recur rm RECURNUM
 
 Key Value Supported:
   Keys:
