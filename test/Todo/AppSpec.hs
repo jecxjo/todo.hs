@@ -21,7 +21,7 @@ spec =
   describe "Todo.App" $ do
     describe "emptyOptions" $ do
       it "is all empty values" $ do
-        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing False
+        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing False Nothing
 
       it "accesses todoTxtPath" $ do
         todoTxtPath emptyOptions `shouldBe` ""
@@ -43,7 +43,7 @@ spec =
 
     describe "initOptions" $ do
       it "is empty with default path" $ do
-        initOptions "todo.txt" `shouldBe` Options "todo.txt" Nothing Nothing Nothing Nothing False
+        initOptions "todo.txt" `shouldBe` Options "todo.txt" Nothing Nothing Nothing Nothing False Nothing
 
     describe "renderError" $ do
       it "displays invalid index" $ do

@@ -20,6 +20,7 @@ import           Todo.App
 import           Todo.Commands.Helpers
 import           Todo.HelpInfo
 import           Todo.Parser
+import           Todo.Parser.Tasks
 import           Todo.Tasks
 import           Todo.RegEx (matchGen, swapGen, swapAllGen)
 import           Todo.Util
@@ -52,6 +53,10 @@ process ("-s":rest) =
 -- | Flag for passing in the location of report.txt file
 process ("-r":path:rest) =
   modify (\st -> st { reportTxtPath = Just (T.unpack path) }) >> process rest
+
+-- | Flag for passing in the location of recur.txt file
+process ("-R":path:res) =
+  modify (\st -> st { recurTxtPath = Just (T.unpack path) }) >> process res
 
 -- | Flag for auto accepting/denying any queries
 process ("-y":rest) =
@@ -298,6 +303,18 @@ process ("license":[]) = liftIO $ T.putStrLn license
 -- | Show changelog
 -- Command Line: changelog
 process ("changelog":[]) = liftIO $ T.putStrLn changelog
+
+-- | Trigger recurring tasks
+process ("recur":[]) = liftIO $ putStrLn $ "Not Supported"
+
+-- | Add recurring task
+process ("recur":"add":rest) = liftIO $ putStrLn "Not Supported"
+
+-- | List recurring tasks
+process ("recur":"list":[]) = liftIO $ putStrLn "Not Supported"
+
+-- | Remove recurring task
+process ("recur":"rm":idx:[]) = liftIO $ putStrLn "Not Supported"
 
 -- | Aliases
 process ("remove":rest) = process ("delete":rest)

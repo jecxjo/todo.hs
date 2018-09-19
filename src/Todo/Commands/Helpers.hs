@@ -47,6 +47,7 @@ import           System.FilePath (joinPath, replaceFileName)
 import           System.IO (hFlush, stdout)
 import           Todo.App
 import           Todo.Parser
+import           Todo.Parser.Tasks
 import           Todo.Tasks
 import           Todo.Util
 

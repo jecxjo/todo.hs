@@ -41,16 +41,17 @@ data Options = Options {
                        , timeStamp :: Maybe Day
                        , autoAccept :: Maybe Bool
                        , forcedPrompt :: Bool
+                       , recurTxtPath :: Maybe FilePath
                        }
                        deriving (Show, Eq)
 
 type AppConfig = MonadState Options
 
 emptyOptions :: Options
-emptyOptions = Options "" Nothing Nothing Nothing Nothing False
+emptyOptions = Options "" Nothing Nothing Nothing Nothing False Nothing
 
 initOptions :: FilePath -> Options
-initOptions path = Options path Nothing Nothing Nothing Nothing False
+initOptions path = Options path Nothing Nothing Nothing Nothing False Nothing
 
 data ErrorType
   = EInvalidIndex Int

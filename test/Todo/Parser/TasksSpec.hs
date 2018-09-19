@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Todo.ParserSpec where
+module Todo.Parser.TasksSpec where
 
-import qualified Todo.Parser as P
+import qualified Todo.Parser.Tasks as P
 import qualified Todo.Tasks as T
 
 import Data.Time.Calendar (fromGregorian)
