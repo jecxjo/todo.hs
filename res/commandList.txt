@@ -32,6 +32,7 @@ Actions:
  searcharchived|sa "regular expression"
  projects
  repeat TASKNUM
+ standup
  help COMMAND
  license
  changelog

@@ -1,0 +1,13 @@
+Display an report for a "Standup Meeting"
+
+    $ todo standup
+    Standup
+    ========================
+    Completed 2018-10-01
+    ------------------------
+    (A) Create standup command
+    @@inbox Check Email
+
+    Due: 2018-10-02
+    ------------------------
+    Update documentation due:2018-10-02

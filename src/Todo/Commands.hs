@@ -6,7 +6,7 @@
 module Todo.Commands where
 
 import qualified Control.Exception as E
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, liftM2)
 import           Data.Bool (bool)
 import           Data.Maybe (maybe)
 import           Data.List (sort, nub, concatMap)
@@ -14,6 +14,7 @@ import           Data.Semigroup ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Text (Text)
+import           Data.Time.Calendar (addDays)
 import           Data.Version (showVersion)
 import           Paths_todo (version)
 import           Todo.App
@@ -280,6 +281,38 @@ process ("repeat":idx:[]) = do
   let newList = new <> nonMatch <> completed
   bool (shortCircuit "Nothing changed") (replacePending newList) =<< (queryConfirm (map snd new) "Repeat")
   liftIO $ putStrLn "Tasks Repeated"
+
+-- | Print stuff completed yesterday and stuff due for today
+process ("standup":[]) = do
+    todo <- getPendingTodo
+    completed <- (liftM2 (++) getArchivedTodo getCompletedTodo)
+    now <- getDay
+    let yesterday = addDays (-1) now
+
+    let due = removeIndex $ filterTupleDueDate now todo
+    let completedYesterday = removeIndex $ filterTupleCompleteDate yesterday completed
+
+    liftIO $ putStrLn "Standup"
+    liftIO $ putStrLn "========================"
+
+    liftIO $ putStrLn $ "Completed " ++ show yesterday
+    liftIO $ putStrLn "------------------------"
+    printList completedYesterday
+    liftIO $ putStrLn ""
+
+    liftIO $ putStrLn $ "Due " ++ show now
+    liftIO $ putStrLn "------------------------"
+    printList due
+    liftIO $ putStrLn ""
+  where
+    remove' (_, (Completed _ task)) = task
+    remove' (_, task) = task
+    removeIndex = map remove'
+
+    printList :: (Show a, MonadIO m) => [a] -> m ()
+    printList lst = forM_ lst (\t -> liftIO . putStrLn $ show t)
+
+
 
 -- |Help output
 -- Command Line: help

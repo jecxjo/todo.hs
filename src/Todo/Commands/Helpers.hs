@@ -26,6 +26,7 @@ module Todo.Commands.Helpers (
     replacePending,
     replaceCompleted,
     filterTupleDueDate,
+    filterTupleCompleteDate,
     shortCircuit,
     filterThreshold
   ) where
@@ -226,6 +227,11 @@ filterTupleDueDate dueDate = filter containsDueDate
     containsDueDate (_, (Completed _ (Incomplete _ _ sx))) = or $ map isDue sx
     containsDueDate (_, (Completed _ (Completed _ _))) = False
 
+filterTupleCompleteDate :: Day -> [(Int, Task)] -> [(Int, Task)]
+filterTupleCompleteDate completeDate = filter containsCompleteDate
+  where
+    containsCompleteDate (_, (Incomplete _ _ _)) = False
+    containsCompleteDate (_, (Completed d _)) = d == completeDate
 
 iso8601 :: UTCTime -> String
 iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
