@@ -8,11 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Added "license" and "changelog" commands, prints relative files
 - Added threshold support
+- Added "standup" command, prints what you did yesterday and what is due today
 
 ### Changed
 - Cleaned up compile time warnings
 - Fixed bug (temporarily) in Control.Monad.TestFixture, pointing at changes until upstream publishes
 - Requires stack version >= 1.7
+- Moved 'todo.cabal' to ignore list, new stack uses yaml and autogenerates todo.cabal
 
 ## [0.4.2] - 2018-05-02
 ### Added
