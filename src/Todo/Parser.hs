@@ -113,7 +113,7 @@ kvstring :: Parser Tasks.StringTypes
 kvstring = try $ do
   key <- many1 alphaNum
   _ <- char ':'
-  value <- many1 alphaNum
+  value <- many1 $ choice [alphaNum, oneOf "`~!@#$%^&*()_+-=[]\\{}|;',./<>?\""]
   _ <- whiteSpace
   return . Tasks.SKeyValue $ Tasks.KVString key value
 

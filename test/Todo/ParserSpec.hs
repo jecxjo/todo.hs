@@ -83,6 +83,12 @@ spec =
       it "Matches t:2018-05-03" $ do
         parse P.keyvalue "" "t:2018-05-03" `shouldBe` Right (T.SKeyValue $ T.KVThreshold (fromGregorian 2018 5 3))
 
+      it "Matches quoted strings test:\"value\"" $ do
+        parse P.keyvalue "" "test:\"value\"" `shouldBe` Right (T.SKeyValue $ T.KVString "test" "\"value\"")
+
+      it "Matches non-alphanumeric in value" $ do
+        parse P.keyvalue "" "test:`~!@#$%^&*()_+[]{};',./<>?" `shouldBe` Right (T.SKeyValue $ T.KVString "test" "`~!@#$%^&*()_+[]{};',./<>?")
+
     describe "Other Strings" $ do
       it "Matches Other123" $ do
         parse P.other "" "Other123" `shouldBe` Right (T.SOther "Other123")
