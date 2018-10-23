@@ -87,6 +87,12 @@ spec =
       it "Matches at:0000" $ do
         parse P.keyvalue "" "at:0000" `shouldBe` Right (T.SKeyValue $ T.KVAt (TimeOfDay 0 0 0))
 
+      it "Matches quoted strings test:\"value\"" $ do
+        parse P.keyvalue "" "test:\"value\"" `shouldBe` Right (T.SKeyValue $ T.KVString "test" "\"value\"")
+
+      it "Matches non-alphanumeric in value" $ do
+        parse P.keyvalue "" "test:`~!@#$%^&*()_+[]{};',./<>?" `shouldBe` Right (T.SKeyValue $ T.KVString "test" "`~!@#$%^&*()_+[]{};',./<>?")
+
     describe "Other Strings" $ do
       it "Matches Other123" $ do
         parse P.other "" "Other123" `shouldBe` Right (T.SOther "Other123")

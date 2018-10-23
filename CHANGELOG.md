@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed bug (temporarily) in Control.Monad.TestFixture, pointing at changes until upstream publishes
 - Requires stack version >= 1.7
 - Moved 'todo.cabal' to ignore list, new stack uses yaml and autogenerates todo.cabal
+- Fixed Key/Value pair to support non alpha-numeric characters in value
 
 ## [0.4.2] - 2018-05-02
 ### Added
