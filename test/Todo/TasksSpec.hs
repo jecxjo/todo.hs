@@ -18,6 +18,7 @@ import Control.Monad.TestFixture
 import Control.Monad.TestFixture.TH
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
+import Data.Time.LocalTime (TimeOfDay(..))
 import Test.Hspec (Spec, describe, context, it, shouldBe, shouldThrow, anyErrorCall)
 import Todo.App
 import Todo.Tasks
@@ -34,6 +35,15 @@ spec =
 
       it "Shows DueDate Key Value Pairs" $ do
         show (KVDueDate (fromGregorian 2017 2 1)) `shouldBe` "due:2017-02-01"
+
+      it "Shows Threshold Key Value Pairs" $ do
+        show (KVThreshold (fromGregorian 2017 2 1)) `shouldBe` "t:2017-02-01"
+
+      it "Shows At Key Value Pairs, with single digit hr and min and padding" $ do
+        show (KVAt (TimeOfDay 1 2 0)) `shouldBe` "at:0102"
+
+      it "Shows At Key Value Pairs, with double digits" $ do
+        show (KVAt (TimeOfDay 10 20 0)) `shouldBe` "at:1020"
 
     describe "Task" $ do
       context "Incomplete Task" $ do
@@ -150,10 +160,14 @@ spec =
       describe "convertStringTypes" $ do
         let day = fromGregorian 2017 3 12
         let date = UTCTime { utctDay = day, utctDayTime = secondsToDiffTime 43200 }
-        let kv = SKeyValue $ KVString "due" "today"
+        let kvs = [ SKeyValue $ KVString "due" "today"
+                  , SKeyValue $ KVString "t" "today"
+                  ]
         let fixture = def { _getDay = return day
                           , _getUTCTime = return date
                           }
         it "Converts array" $ do
-          let res = unTestFixture (convertStringTypes [kv]) fixture
-          res `shouldBe` [SKeyValue $ KVDueDate day]
+          let res = unTestFixture (convertStringTypes kvs) fixture
+          res `shouldBe` [ SKeyValue $ KVDueDate day
+                         , SKeyValue $ KVThreshold day
+                         ]

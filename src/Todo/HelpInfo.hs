@@ -51,10 +51,12 @@ helpTopics "changelog" = fn "commands/help.txt"
 helpTopics "swap" = fn "commands/swap.txt"
 helpTopics "repeat" = fn "commands/repeat.txt"
 helpTopics "standup" = fn "commands/standup.txt"
+helpTopics "today" = fn "commands/today.txt"
 
 helpTopics "todo.txt" = fn "topics/todo.txt"
 helpTopics "duedate" = fn "topics/duedate.txt"
 helpTopics "threshold" = fn "topics/threshold.txt"
+helpTopics "at" = fn "topics/at.txt"
 
 helpTopics cmd = "Unknown Command: " <> cmd <> "\n" <> commandList
 

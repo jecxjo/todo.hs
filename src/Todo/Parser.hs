@@ -21,8 +21,10 @@ module Todo.Parser
 import Control.Applicative (many)
 import Data.Char (toUpper)
 import Data.List (concat)
+import Data.Maybe (isJust, fromJust)
 import Data.Text (pack)
 import Data.Time.Calendar (fromGregorian, Day(..))
+import Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
 import Text.Parsec.Char ( char
                         , oneOf
                         , letter
@@ -131,8 +133,25 @@ kvthreshold = try $ do
   _ <- whiteSpace
   return . Tasks.SKeyValue $ Tasks.KVThreshold d
 
+kvat :: Parser Tasks.StringTypes
+kvat = try $ do
+    _ <- string "at:"
+    hr <- twoDigit
+    min <- twoDigit
+    _ <- whiteSpace
+    let tod = makeTimeOfDayValid hr min 0
+    if (isJust tod) then
+      return . Tasks.SKeyValue . Tasks.KVAt $ fromJust tod
+    else
+      fail "Not a valid time"
+  where
+    twoDigit = do
+      x <- digit
+      y <- digit
+      return $ read (x:y:[])
+
 keyvalue :: Parser Tasks.StringTypes
-keyvalue = choice [ kvduedate, kvthreshold, kvstring ]
+keyvalue = choice [ kvduedate, kvthreshold, kvat, kvstring ]
 
 -- |Other string content
 -- This parser removes any spacess and newlines from beginning.

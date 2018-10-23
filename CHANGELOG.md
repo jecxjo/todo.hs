@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added "license" and "changelog" commands, prints relative files
 - Added threshold support
 - Added "standup" command, prints what you did yesterday and what is due today
+- Added "today" command, printing tasks due today sorted by "at" time
+- Added support for "at" time
 
 ### Changed
 - Cleaned up compile time warnings
