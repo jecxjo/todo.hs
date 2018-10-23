@@ -57,9 +57,9 @@ digitCount x
     | otherwise = 1 + digitCount ((x - (x `mod` 10)) `div` 10)
 
 -- |Show Number with padding
-showPaddedNumber :: Int -> Int -> String
-showPaddedNumber width number =
-  (take (width - (fromIntegral $ digitCount number)) $ repeat ' ') ++ show number
+showPaddedNumber :: Char -> Int -> Int -> String
+showPaddedNumber c width number =
+  (take (width - (fromIntegral $ digitCount number)) $ repeat c) ++ show number
 
 -- | Similar to maybe and bool, the notEmpty applies a function on a non-empty list
 notEmpty :: b -> ([a] -> b) -> [a] -> b

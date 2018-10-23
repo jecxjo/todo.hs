@@ -9,7 +9,7 @@ import qualified Control.Exception as E
 import           Control.Monad (forM_, liftM2)
 import           Data.Bool (bool)
 import           Data.Maybe (maybe)
-import           Data.List (sort, nub, concatMap)
+import           Data.List (sort, nub, concatMap, sortBy)
 import           Data.Semigroup ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -312,7 +312,23 @@ process ("standup":[]) = do
     printList :: (Show a, MonadIO m) => [a] -> m ()
     printList lst = forM_ lst (\t -> liftIO . putStrLn $ show t)
 
-
+-- |Print tasks due today, ordered by "at:HHMM"
+process ("today":[]) = do
+    todo <- getAllTodo
+    now <- getDay
+    let forToday = filterTupleDueDate now todo
+    let sorted = sortBy byAt forToday
+    liftIO $ putStrLn $ "Today: " ++ show now
+    liftIO $ putStrLn "-----------------"
+    printTuple sorted
+  where
+    byAt (_, a) (_, b) =
+      case (a, b) of
+        ((Incomplete _ _ aKV),(Completed _ (Incomplete _ _ bKV))) -> compare (extractAt aKV) (extractAt bKV)
+        ((Completed _ (Incomplete _ _ aKV)),(Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
+        ((Incomplete _ _ aKV),(Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
+        ((Completed _ (Incomplete _ _ aKV)),(Completed _ (Incomplete _ _ bKV))) -> compare (extractAt aKV) (extractAt bKV)
+        _ -> EQ -- Don't care at that point its all screwed up
 
 -- |Help output
 -- Command Line: help

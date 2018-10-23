@@ -5,6 +5,7 @@ import qualified Todo.Parser as P
 import qualified Todo.Tasks as T
 
 import Data.Time.Calendar (fromGregorian)
+import Data.Time.LocalTime (TimeOfDay(..))
 import Text.Parsec.Prim (parse)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe)
 
@@ -82,6 +83,9 @@ spec =
 
       it "Matches t:2018-05-03" $ do
         parse P.keyvalue "" "t:2018-05-03" `shouldBe` Right (T.SKeyValue $ T.KVThreshold (fromGregorian 2018 5 3))
+
+      it "Matches at:0000" $ do
+        parse P.keyvalue "" "at:0000" `shouldBe` Right (T.SKeyValue $ T.KVAt (TimeOfDay 0 0 0))
 
       it "Matches quoted strings test:\"value\"" $ do
         parse P.keyvalue "" "test:\"value\"" `shouldBe` Right (T.SKeyValue $ T.KVString "test" "\"value\"")

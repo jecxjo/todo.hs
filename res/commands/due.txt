@@ -14,4 +14,4 @@ When creating a task, due dates can be assigned directly or with relative terms:
 
 Supported relative dates: today, yesterday, tomorrow, monday - sunday.
 
-Related Commands: add
+Related Commands: add, today

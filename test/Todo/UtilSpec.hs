@@ -59,10 +59,13 @@ spec =
 
     describe "showPaddedNumber" $ do
       it "Adds white space when too small" $ do
-        showPaddedNumber 10 123 `shouldBe` "       123"
+        showPaddedNumber ' ' 10 123 `shouldBe` "       123"
 
       it "fits size when too big" $ do
-        showPaddedNumber 1 123 `shouldBe` ("123" :: String)
+        showPaddedNumber ' ' 1 123 `shouldBe` ("123" :: String)
+
+      it "Adds '0' when too small" $ do
+        showPaddedNumber '0' 10 123 `shouldBe` "0000000123"
 
     describe "notEmpty" $ do
       let fn :: [Int] -> Int

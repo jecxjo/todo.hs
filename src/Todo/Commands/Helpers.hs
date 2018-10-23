@@ -72,7 +72,7 @@ todoFilePath = do
 printTuple :: (Show a, MonadIO m) => [(Int, a)] -> m ()
 printTuple lst = forM_ lst print'
   where width = fromIntegral $ digitCount $ maximum $ fst $ unzip lst
-        print' (n, t) = liftIO . putStrLn $ (showPaddedNumber width n) ++ ": " ++ show t
+        print' (n, t) = liftIO . putStrLn $ (showPaddedNumber ' ' width n) ++ ": " ++ show t
 
 -- | Print tasks with prefixed message
 printPrefixedTuple :: (Show a, MonadIO m) => Text -> [(Int, a)] -> m ()

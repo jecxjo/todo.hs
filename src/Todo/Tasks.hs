@@ -18,6 +18,7 @@ module Todo.Tasks
   , getKeyValues
   , extractDueDate
   , extractThreshold
+  , extractAt
   ) where
 
 import           Control.Monad (liftM)
@@ -26,10 +27,11 @@ import           Data.Char (toLower)
 import           Data.Time (toGregorian)
 import           Data.Time.Calendar (addDays, Day(..))
 import           Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
+import           Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
 import           Data.Traversable (forM)
 import qualified Data.Text as T
 import           Data.Text (Text)
-import           Todo.Util (subsetOf)
+import           Todo.Util (subsetOf, showPaddedNumber)
 import           Todo.App (MonadDate, AppError, getDay, throwError, ErrorType(..))
 
 -- |Priority: (A)
@@ -44,12 +46,14 @@ type Context = String
 -- |Key Value pairs: due:2017-01-02
 data KeyValue = KVDueDate Day
               | KVThreshold Day
+              | KVAt TimeOfDay
               | KVString String String
               deriving (Eq)
 
 instance Show KeyValue where
   show (KVDueDate date) = "due:" ++ (show date)
   show (KVThreshold date) = "t:" ++ (show date)
+  show (KVAt (TimeOfDay hr min _)) = "at:" ++ (showPaddedNumber '0' 2 hr) ++ (showPaddedNumber '0' 2 min)
   show (KVString key value) = key ++ ":" ++ value
 
 
@@ -93,6 +97,11 @@ extractThreshold :: [StringTypes] -> Maybe Day
 extractThreshold [] = Nothing
 extractThreshold ((SKeyValue (KVThreshold d)):_) = Just d
 extractThreshold (_:xs) = extractThreshold xs
+
+extractAt :: [StringTypes] -> Maybe TimeOfDay
+extractAt [] = Nothing
+extractAt ((SKeyValue (KVAt tod)):_) = Just tod
+extractAt (_:xs) = extractAt xs
 
 -- |Data type to store both incomplete and completed tasks.
 data Task = Incomplete (Maybe Priority) (Maybe Day) [StringTypes]
