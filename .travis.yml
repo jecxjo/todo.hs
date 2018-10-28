@@ -23,7 +23,7 @@ install:
 script:
 - stack --no-terminal install --haddock --no-haddock-deps
 before_deploy:
-  - script: cp "${TRAVIS_HOME}/.local/bin/todo" ./todo-${TRAVIS_OS_NAME}
+  - script: cp "$(stack path --local-install-root)/bin/todo" ./todo-${TRAVIS_OS_NAME}
 deploy:
   provider: releases
   api_key:
