@@ -21,7 +21,7 @@ before_install:
 install:
 - stack --no-terminal --install-ghc test --only-dependencies
 script:
-- stack --no-terminal test --haddock --no-haddock-deps
+- stack --no-terminal install --haddock --no-haddock-deps
 deploy:
   provider: releases
   api_key:
@@ -30,5 +30,4 @@ deploy:
   skip_cleanup: true
   on:
     repo: jecxjo/todo.hs
-    tags: true
     branch: master
