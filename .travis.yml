@@ -1,6 +1,11 @@
 # Use new container infrastructure to enable caching
 sudo: false
 
+# Multi-OS
+os:
+  - linux
+  - osx
+
 # Providing own build tools
 language: generic
 
@@ -19,7 +24,8 @@ before_install:
 # Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
-- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/linux-x86_64.tar.gz" | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/osx-x86_64.tar.gz" | tar xz -C ~/.local/bin '*/stack'; mv ~/.local/bin/stack-*/stack ~/.local/bin/stack; fi
 
 install:
 # Build Dependencies
