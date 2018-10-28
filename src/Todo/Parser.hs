@@ -19,11 +19,12 @@ module Todo.Parser
     ) where
 
 import Control.Applicative (many)
+import Control.Monad (liftM)
 import Data.Char (toUpper)
 import Data.List (concat)
 import Data.Maybe (isJust, fromJust)
 import Data.Text (pack)
-import Data.Time.Calendar (fromGregorian, Day(..))
+import Data.Time.Calendar (fromGregorianValid, Day(..))
 import Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
 import Text.Parsec.Char ( char
                         , oneOf
@@ -38,7 +39,7 @@ import Text.Parsec.Combinator ( many1
                               , choice
                               , option)
 import Text.Parsec.Error as E
-import Text.Parsec.Prim (parse, try)
+import Text.Parsec.Prim (parse, try, parserFail)
 import Text.Parsec.Text
 
 import qualified Todo.Tasks as Tasks
@@ -65,12 +66,15 @@ priority = do
 -- Supports 2 or 4 digit year, and 1 or 2 digit month and day.
 date :: Parser Day
 date = do
-    year <- twoToFourDigits
+    year <- liftM (convertYear . read) twoToFourDigits
     _ <- char '-'
-    month <- oneToTwoDigits
+    month <- liftM read oneToTwoDigits
     _ <- char '-'
-    day <- oneToTwoDigits
-    return $ fromGregorian (convertYear $ read year) (read month) (read day)
+    day <- liftM read oneToTwoDigits
+    let maybeDay = fromGregorianValid year month day
+    if (isJust maybeDay)
+      then return $ fromJust maybeDay
+      else parserFail $ "Invalid Date: " ++ show year ++ "-" ++ show month ++ "-" ++ show day
   where oneToTwoDigits = do
           x <- digit
           y <- option ' ' $ digit

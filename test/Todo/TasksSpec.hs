@@ -16,9 +16,10 @@ import Control.Exception (evaluate)
 import Control.Monad.Date
 import Control.Monad.TestFixture
 import Control.Monad.TestFixture.TH
+import Data.Maybe (fromJust)
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
-import Data.Time.LocalTime (TimeOfDay(..))
+import Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
 import Test.Hspec (Spec, describe, context, it, shouldBe, shouldThrow, anyErrorCall)
 import Todo.App
 import Todo.Tasks
@@ -162,6 +163,7 @@ spec =
         let date = UTCTime { utctDay = day, utctDayTime = secondsToDiffTime 43200 }
         let kvs = [ SKeyValue $ KVString "due" "today"
                   , SKeyValue $ KVString "t" "today"
+                  , SKeyValue $ KVString "at" "noon"
                   ]
         let fixture = def { _getDay = return day
                           , _getUTCTime = return date
@@ -170,4 +172,5 @@ spec =
           let res = unTestFixture (convertStringTypes kvs) fixture
           res `shouldBe` [ SKeyValue $ KVDueDate day
                          , SKeyValue $ KVThreshold day
+                         , SKeyValue $ KVAt (fromJust $ makeTimeOfDayValid 12 0 0)
                          ]

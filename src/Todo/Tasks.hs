@@ -27,7 +27,7 @@ import           Data.Char (toLower)
 import           Data.Time (toGregorian)
 import           Data.Time.Calendar (addDays, Day(..))
 import           Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
-import           Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
+import           Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid, midday, midnight)
 import           Data.Traversable (forM)
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -182,6 +182,16 @@ convertToDate str
       then return . addDays 7 $ fromWeekDate yr wk off
       else return $ fromWeekDate yr wk off
 
+-- |Convert String to Time
+convertToTime :: (AppError m) => String -> m TimeOfDay
+convertToTime str
+  | timeString == "noon" = return midday
+  | timeString == "midday" = return midday
+  | timeString == "midnight" = return midnight
+  | otherwise = throwError . EMiscError . T.pack $ "invalid time '" ++ str ++ "'"
+  where
+    timeString = map toLower str
+
 -- |Convert all KV Due Dates that are strings into actual dates
 convertStringType :: (AppError m, MonadDate m) => StringTypes -> m StringTypes
 convertStringType (SKeyValue kv) = do
@@ -192,6 +202,9 @@ convertStringType (SKeyValue kv) = do
       KVString "t" val -> do
         converted <- convertToDate val
         return . SKeyValue $ KVThreshold converted
+      KVString "at" val -> do
+        converted <- convertToTime val
+        return . SKeyValue $ KVAt converted
       rest ->  do
         return $ SKeyValue rest
 convertStringType rest = do

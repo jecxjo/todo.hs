@@ -4,10 +4,11 @@ module Todo.ParserSpec where
 import qualified Todo.Parser as P
 import qualified Todo.Tasks as T
 
+import Data.Either (isLeft)
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.LocalTime (TimeOfDay(..))
 import Text.Parsec.Prim (parse)
-import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe)
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 -- | Required for auto-discovery
 spec :: Spec
@@ -18,7 +19,7 @@ spec =
         parse P.priority "" "(A)" `shouldBe` Right ('A' :: T.Priority)
 
       it "Doesn't match A as Priority A" $ do
-        parse P.priority "" "A" `shouldNotBe` Right ('A' :: T.Priority)
+        isLeft (parse P.priority "" "A") `shouldBe` True
 
     describe "Date" $ do
       it "Matches 2007-01-02" $ do
@@ -31,17 +32,27 @@ spec =
         parse P.date "" "07-1-2" `shouldBe` Right (fromGregorian 2007 1 2)
 
       it "Doesn't match 7-1-2" $ do
-        parse P.date "" "7-1-2" `shouldNotBe` Right (fromGregorian 2007 1 2)
+        isLeft (parse P.date "" "7-1-2") `shouldBe` True
+
+      it "Doesn't match bad month" $ do
+        isLeft (parse P.date "" "2007-13-02") `shouldBe` True
+
+      it "Doesn't match bad day" $ do
+        isLeft (parse P.date "" "2007-10-32") `shouldBe` True
+
+      it "Matches leap year" $ do
+        parse P.date "" "2012-02-29" `shouldBe` Right (fromGregorian 2012 2 29)
+        isLeft (parse P.date "" "2013-02-29") `shouldBe` True
 
     describe "Project" $ do
       it "Matches +ProjectName" $ do
         parse P.project "" "+ProjectName" `shouldBe` Right (T.SProject "ProjectName")
 
       it "Doesn't match ProjectName" $ do
-        parse P.project "" "ProjectName" `shouldNotBe` Right (T.SProject "ProjectName")
+        isLeft (parse P.project "" "ProjectName") `shouldBe` True
 
       it "Doesn't match @ProjectName" $ do
-        parse P.project "" "@ProjectName" `shouldNotBe` Right (T.SProject "ProjectName")
+        isLeft (parse P.project "" "@ProjectName") `shouldBe` True
 
       it "Matches +ProjectName.SubProjectName" $ do
         parse P.project "" "+ProjectName.SubProjectName" `shouldBe` Right (T.SProject "ProjectName.SubProjectName")
@@ -50,20 +61,20 @@ spec =
         parse P.project "" "+ProjectName-SubProjectName" `shouldBe` Right (T.SProject "ProjectName-SubProjectName")
 
       it "Doesn't match +ProjectName..SubProjectName" $ do
-        parse P.project "" "+ProjectName..SubProjectName" `shouldNotBe` Right (T.SProject "ProjectName..SubProjectName")
+        isLeft (parse P.project "" "+ProjectName..SubProjectName") `shouldBe` True
 
       it "Doesn't match +ProjectName--SubProjectName" $ do
-        parse P.project "" "+ProjectName--SubProjectName" `shouldNotBe` Right (T.SProject "ProjectName--SubProjectName")
+        isLeft (parse P.project "" "+ProjectName--SubProjectName") `shouldBe` True
 
     describe "Context" $ do
       it "Matches @ContextString" $ do
         parse P.context "" "@ContextString" `shouldBe` Right (T.SContext "ContextString")
 
       it "Doesn't match ContextString" $ do
-        parse P.context "" "ContextString" `shouldNotBe` Right (T.SContext "ContextString")
+        isLeft (parse P.context "" "ContextString") `shouldBe` True
 
       it "Doesn't match +ContextString" $ do
-        parse P.context "" "+ContextString" `shouldNotBe` Right (T.SContext "ContextString")
+        isLeft (parse P.context "" "+ContextString") `shouldBe` True
 
       it "Matches @foo+baz@bar-quux.com" $ do
         parse P.context "" "@foo+baz@bar-quux.com" `shouldBe` Right (T.SContext "foo+baz@bar-quux.com")
