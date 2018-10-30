@@ -13,25 +13,23 @@ addons:
 before_install:
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/linux-x86_64.tar.gz"
-  | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/osx-x86_64.tar.gz"
-  | tar xz -C ~/.local/bin '*/stack'; mv ~/.local/bin/stack-*/stack ~/.local/bin/stack;
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/linux-x86_64.tar.gz" | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://get.haskellstack.org/stable/osx-x86_64.tar.gz" | tar xz -C ~/.local/bin '*/stack'; mv ~/.local/bin/stack-*/stack ~/.local/bin/stack;
   fi
 install:
 - stack --no-terminal --install-ghc test --only-dependencies
 script:
 - stack --no-terminal install --haddock --no-haddock-deps
 before_deploy:
-  - script: cp "$(stack path --local-install-root)/bin/todo" ./todo-${TRAVIS_OS_NAME}
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-linux.gz" | zcat -d > ~/.local/bin/github-release; chmod +x ~/.local/bin/github-release; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-osx.gz" | zcat -d > ~/.local/bin/github-release; chmod +x ~/.local/bin/github-release; fi
 deploy:
-  provider: releases
-  api_key:
-    secure: vI0+Bfu6+wtib5jKmMbgLDOaw61dtTtHD9oHNCOWWPfojMzvl8aC/EYwvd3EjFcMxkH6a22M0R4lhRXWXX9Y7ocxI1rI8kySjb+t4R8+IaMW1Cthyvfm0BGoRLTFxpAO6sLsjMGp695u0WBP1Rvmpc/bj2u4mjSl92hOT0th6WemAKXoJu+DpKSRf7ZlaK6KvEEyYboSmuwez8dzC2GUsB7AtpMhiQ30wmkC5skMw4+RqPmy//ltYD4F2NWW1xlJQGg5YqlKQ+IlNw2PnpHpkEFiBKs3FqHFgk5LdodCuGesu29S4G5NcvAQhDDgcmwpd4VetHUOn/ZyWoEE/5cHKc0yfBOQs5SK5kRNm9okEfSU0sqelqWAk0A3D2SiB7MYctxauKH3S5Ml3Ph0wfLV60I53IL54LeiPgVnbbCfhS2+tRH4BP1Kd7Ns8k8beNzkhr5lQCNo3LSDITk5uoVQ62XY7ps0T9mD+7ueBs5dNB0kFtNmO+dUiTI+QDW493SM81vyMOX8IXKJ+xpt3VPs+HjCQxEKvwzc04TOqXikRMNlr9t6xCU5d7uCpXl3KjgdCeJjrT8eBmQjX/0R1PMq0q0P7mVwkT+a4Nx526D2+GMR0jdfCOcqB6dz4tgd+oEmVPHjuLrzW0fSqS4YWO7to4fpZHSSx23nkZgfIQ+8XUE=
-  file:
-    - "todo-${TRAVIS_OS_NAME}"
+  provider: script
+  script: bash scripts/deploy.sh "${TRAVIS_OS_NAME}" "${TRAVIS_TAG}"
   skip_cleanup: true
   on:
-    repo: jecxjo/todo.hs
     branch: master
     tags: true
+env:
+  global:
+    secure: PPjcOuWp3/X/qpPHoQUZ34iegI5zrUmb7mscZqp9Gva36OoZagDDkjZqHaOf9/0vaA8e/QGGVHNAbg2zCrGVJS540jBJ59RsYBZOpEyzYOpLSNm4DWj3pNiwiVV9aC7n8cvvCTnxHG0xf0AKz5pNNRMxvXCXlDvpbclBgAybqkfeD2bH6tfdFJAGT8stsz8+UcMFpee725rfSEPhdvJCDFiWAtIX7cfsHw2H/ChhGPuFtg91YYJchMFGyTesOuokLb7zI+jShy1ke+4+T1Dqh763MoHTqtAvbaciJgy95d/liLymd6cFNXoyS2e1ANx5AnSuYL27vv12NsY0UXY11by341PQCx6OrX02TcGEviaaSyWxyizFpsqv3CO+jSBF+K5usHayk06NnrVuHBHVhsJd1ytvoci45mkAiC9SY4ZkoyMJ9kFD3XrFtlAsOv1vObewF2girWLOgyEpokgnoTjAVUUhw/6d80MLEkhWjl9FiTpP9yYpawY3WVZUIHPCZTc88NR+hBkQLEwju0YMzYoyogaACzqxsPpjEhGTQ2ssfF9kEzFqS3mYpnyFM3PDukd8Q2aHtQxcpyuwB8qYYUztM05lUsK6/aS5jV1SMkzPl9UdIVMLmT6R3aK4/TdMwvdXVrB52vE+ZxF3GhuBSPR58THOo0pk3l/sE9J+7mg=
