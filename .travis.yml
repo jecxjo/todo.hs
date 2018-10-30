@@ -21,8 +21,8 @@ install:
 script:
 - stack --no-terminal install --haddock --no-haddock-deps
 before_deploy:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-linux.gz" | zcat -d > ~/.local/bin/github-release; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-osx.gz" | zcat -d > ~/.local/bin/github-release; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-linux.gz" | zcat -d > ~/.local/bin/github-release; chmod +x ~/.local/bin/github-release; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then travis_retry curl -L "https://github.com/tfausak/github-release/releases/download/1.2.2/github-release-osx.gz" | zcat -d > ~/.local/bin/github-release; chmod +x ~/.local/bin/github-release; fi
 deploy:
   provider: script
   script: bash scripts/deploy.sh "${TRAVIS_OS_NAME}" "${TRAVIS_TAG}"
