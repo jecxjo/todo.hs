@@ -8,6 +8,7 @@ fi
 TAG="${1}"
 OS="${2}"
 
+echo "Deploying ${TAG} no ${OS}"
 github-release upload \
   --token "${GITHUB_TOKEN}" \
   --owner 'jecxjo' \
