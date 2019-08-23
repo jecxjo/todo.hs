@@ -1,31 +1,29 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE TemplateHaskell #-}
+module Control.Monad.Date where
 
-module Control.Monad.Date (MonadDate(..)) where
-
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.Reader (ReaderT)
-import           Control.Monad.State (StateT)
-import           Control.Monad.Writer (WriterT)
-import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Polysemy
+import           Polysemy.IO
 import           Data.Time (getCurrentTime, utctDay, UTCTime(..))
 import           Data.Time.Calendar (Day(..))
 
-class Monad m => MonadDate m where
-  getDay :: m Day
-  getUTCTime :: m UTCTime
+data Date m a where
+  GetDay :: Date m Day
+  GetUTCTime :: Date m UTCTime
 
-  default getDay :: (MonadTrans t, MonadDate m', m ~ t m') => m Day
-  getDay = lift getDay
+makeSem ''Date
 
-  default getUTCTime :: (MonadTrans t, MonadDate m', m ~ t m') => m UTCTime
-  getUTCTime = lift getUTCTime
-
-instance MonadDate m => MonadDate (ExceptT e m)
-instance MonadDate m => MonadDate (ReaderT r m)
-instance MonadDate m => MonadDate (StateT s m)
-instance (MonadDate m, Monoid w) => MonadDate (WriterT w m)
-
-instance MonadDate IO where
-  getDay = utctDay <$> getCurrentTime
-  getUTCTime = getCurrentTime
+runDateIO :: Member (Embed IO) r => Sem (Date ': r) a -> Sem r a
+runDateIO = interpret $ \case
+  GetDay -> embed getCurrentTime >>= (return . utctDay)
+  GetUTCTime -> embed getCurrentTime

@@ -1,29 +1,35 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE TemplateHaskell #-}
+module Control.Monad.Arguments where
 
-module Control.Monad.Arguments (
-    MonadArguments(..)
-  ) where
-
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.Reader (ReaderT)
-import           Control.Monad.State (StateT)
-import           Control.Monad.Writer (WriterT)
-import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Polysemy
+import           Polysemy.IO
+import           Polysemy.Input
+import qualified System.Environment as ENV
 import           Data.Text (Text)
 import qualified Data.Text as T
-import qualified System.Environment as IO
 
-class Monad m => MonadArguments m where
-  getArgs :: m [Text]
+data Arguments m a where
+  GetArguments :: Arguments m [Text]
 
-  default getArgs :: (MonadTrans t, MonadArguments m', m ~ t m') => m [Text]
-  getArgs = lift getArgs
+makeSem ''Arguments
 
-instance MonadArguments m => MonadArguments (ExceptT e m)
-instance MonadArguments m => MonadArguments (ReaderT r m)
-instance MonadArguments m => MonadArguments (StateT s m)
-instance (MonadArguments m, Monoid w) => MonadArguments (WriterT w m)
+runArgumentsIO :: Member (Embed IO) r => Sem (Arguments ': r) a -> Sem r a
+runArgumentsIO = interpret $ \case
+  GetArguments -> fmap (map T.pack) $ embed ENV.getArgs
 
-instance MonadArguments IO where
-  getArgs = map T.pack <$> IO.getArgs
+runArgumentsPure :: [Text] -> Sem (Arguments ': r) a -> Sem r ([Text], a)
+runArgumentsPure i
+  = runInputConst i
+  . reinterpret \case
+      GetArguments -> input
