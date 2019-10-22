@@ -66,25 +66,25 @@ priority = do
 -- Supports 2 or 4 digit year, and 1 or 2 digit month and day.
 date :: Parser Day
 date = do
-    year <- liftM (convertYear . read) twoToFourDigits
+    year <- fmap (convertYear . read) twoToFourDigits
     _ <- char '-'
-    month <- liftM read oneToTwoDigits
+    month <- fmap read oneToTwoDigits
     _ <- char '-'
-    day <- liftM read oneToTwoDigits
+    day <- fmap read oneToTwoDigits
     let maybeDay = fromGregorianValid year month day
-    if (isJust maybeDay)
-      then return $ fromJust maybeDay
-      else parserFail $ "Invalid Date: " ++ show year ++ "-" ++ show month ++ "-" ++ show day
+    maybe (parserFail $ "Invalid Date: " ++ show year ++ "-" ++ show month ++ "-" ++ show day)
+      return
+      maybeDay
   where oneToTwoDigits = do
           x <- digit
-          y <- option ' ' $ digit
-          return (x:y:[])
+          y <- option ' ' digit
+          return [x, y]
         twoToFourDigits = do
           w <- digit
           x <- digit
-          y <- option ' ' $ digit
-          z <- option ' ' $ digit
-          return (w:x:y:z:[])
+          y <- option ' ' digit
+          z <- option ' ' digit
+          return [w, x, y, z]
         convertYear x = if x < 100
                         then x + 2000
                         else x
@@ -144,15 +144,14 @@ kvat = try $ do
     min <- twoDigit
     _ <- whiteSpace
     let tod = makeTimeOfDayValid hr min 0
-    if (isJust tod) then
-      return . Tasks.SKeyValue . Tasks.KVAt $ fromJust tod
-    else
-      fail "Not a valid time"
+    maybe (fail "Not a valid time")
+      (return . Tasks.SKeyValue . Tasks.KVAt)
+      tod
   where
     twoDigit = do
       x <- digit
       y <- digit
-      return $ read (x:y:[])
+      return $ read [x, y]
 
 keyvalue :: Parser Tasks.StringTypes
 keyvalue = choice [ kvduedate, kvthreshold, kvat, kvstring ]
@@ -179,9 +178,7 @@ stringTypes = choice [
 
 -- |Parse a lot of string types
 lots :: Parser [Tasks.StringTypes]
-lots = do
-  l <- many1 stringTypes
-  return l
+lots = many1 stringTypes
 
 --
 -- Full Task strings
@@ -221,13 +218,10 @@ completedTask = do
 task :: Parser Tasks.Task
 task = do
   _ <- try (many (char '\n'))
-  t <- choice [ completedTask, incompleteTask ]
-  return t
+  choice [ completedTask, incompleteTask ]
 
 tasks :: Parser [Tasks.Task]
-tasks = do
-  tx <- option [] . try $ many task
-  return tx
+tasks = option [] . try $ many task
 
 -- |Parses entire lines. This call includes the string for the file path which
 -- is used in the error message.

@@ -27,5 +27,5 @@ instance MonadDate m => MonadDate (StateT s m)
 instance (MonadDate m, Monoid w) => MonadDate (WriterT w m)
 
 instance MonadDate IO where
-  getDay = getCurrentTime >>= (return . utctDay)
+  getDay = utctDay <$> getCurrentTime
   getUTCTime = getCurrentTime

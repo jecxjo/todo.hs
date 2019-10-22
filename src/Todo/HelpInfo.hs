@@ -10,12 +10,13 @@ module Todo.HelpInfo (
 
 import           App.Resources
 import           Todo.Commands.Helpers
+import           Data.Maybe (fromMaybe)
 import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 
 fn :: Text -> Text
-fn path = maybe "Missing Resource" id (getResource $ T.unpack path)
+fn path = fromMaybe "Missing Resource" (getResource $ T.unpack path)
 
 usage :: Text
 usage = fn "usage.txt"

@@ -51,9 +51,9 @@ data KeyValue = KVDueDate Day
               deriving (Eq)
 
 instance Show KeyValue where
-  show (KVDueDate date) = "due:" ++ (show date)
-  show (KVThreshold date) = "t:" ++ (show date)
-  show (KVAt (TimeOfDay hr min _)) = "at:" ++ (showPaddedNumber '0' 2 hr) ++ (showPaddedNumber '0' 2 min)
+  show (KVDueDate date) = "due:" ++ show date
+  show (KVThreshold date) = "t:" ++ show date
+  show (KVAt (TimeOfDay hr min _)) = "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 min
   show (KVString key value) = key ++ ":" ++ value
 
 
@@ -90,17 +90,17 @@ getKeyValues = map (\(SKeyValue kv) -> kv) . filter fn
 
 extractDueDate :: [StringTypes] -> Maybe Day
 extractDueDate [] = Nothing
-extractDueDate ((SKeyValue (KVDueDate d)):_) = Just d
+extractDueDate (SKeyValue (KVDueDate d):_) = Just d
 extractDueDate (_:xs) = extractDueDate xs
 
 extractThreshold :: [StringTypes] -> Maybe Day
 extractThreshold [] = Nothing
-extractThreshold ((SKeyValue (KVThreshold d)):_) = Just d
+extractThreshold (SKeyValue (KVThreshold d):_) = Just d
 extractThreshold (_:xs) = extractThreshold xs
 
 extractAt :: [StringTypes] -> Maybe TimeOfDay
 extractAt [] = Nothing
-extractAt ((SKeyValue (KVAt tod)):_) = Just tod
+extractAt (SKeyValue (KVAt tod):_) = Just tod
 extractAt (_:xs) = extractAt xs
 
 -- |Data type to store both incomplete and completed tasks.
@@ -109,10 +109,10 @@ data Task = Incomplete (Maybe Priority) (Maybe Day) [StringTypes]
 
 -- |Show Task in format "(A) 2016-07-30 Task to do +Project @Context"
 instance Show Task where
-  show (Completed date task) = "x " ++ (show date) ++ " " ++ (show task)
-  show (Incomplete mPriority mDate sx) = (showPriority mPriority)
-                                                ++ (showDate mDate)
-                                                ++ (unrollStringTypes sx)
+  show (Completed date task) = "x " ++ show date ++ " " ++ show task
+  show (Incomplete mPriority mDate sx) = showPriority mPriority
+                                                ++ showDate mDate
+                                                ++ unrollStringTypes sx
     where showPriority (Just p) = "(" ++ [p] ++ ") "
           showPriority Nothing = ""
           showDate (Just d) = show d ++ " "
@@ -124,8 +124,8 @@ instance Eq Task where
   (Incomplete (Just _) _ _) == (Incomplete Nothing _ _) = False
   (Incomplete Nothing _ _) == (Incomplete (Just _) _ _) = False
   (Incomplete (Just a) _ _) == (Incomplete (Just b) _ _) = a == b
-  (Incomplete _ _ _) == (Completed _ _) = False
-  (Completed _ _) == (Incomplete _ _ _) = False
+  Incomplete{} == (Completed _ _) = False
+  (Completed _ _) == Incomplete{} = False
   (Completed _ t1) == (Completed _ t2) = t1 == t2
 
 -- |Comparisons are done based on priority.
@@ -133,15 +133,15 @@ instance Ord Task where
   compare (Incomplete Nothing _ _) (Incomplete Nothing _ _) = EQ
   compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = LT
   compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = GT
-  compare (Incomplete _ _ _) (Completed _ _) = LT
-  compare (Completed _ _) (Incomplete _ _ _) = GT
+  compare Incomplete{} (Completed _ _) = LT
+  compare (Completed _ _) Incomplete{} = GT
   compare (Incomplete (Just a) _ _) (Incomplete (Just b) _ _) =
     compare a b
   compare (Completed _ t1) (Completed _ t2) = compare t1 t2
 
 -- |Filters out all completed tasks and returns a list of incomplete
 isIncomplete :: Task -> Bool
-isIncomplete (Incomplete _ _ _) = True
+isIncomplete Incomplete{} = True
 isIncomplete _ = False
 
 -- |Filters out all incomplete tasks and returns a list of completed
@@ -151,14 +151,14 @@ isCompleted _ = False
 
 -- | Returns True if task contains the list of text
 containsText :: [Text] -> Task -> Bool
-containsText terms task = foldl (\res term -> res && (T.toUpper term) `T.isInfixOf` (T.toUpper . T.pack $ show task)) True terms
+containsText terms task = foldl (\res term -> res && T.toUpper term `T.isInfixOf` (T.toUpper . T.pack $ show task)) True terms
 
 -- |Convert String to Date
 convertToDate :: (AppError m, MonadDate m) => String -> m Day
 convertToDate str
   | dayString == "today" = getDay
-  | dayString == "tomorrow" = getDay >>= (return . addDays 1)
-  | dayString == "yesterday" = getDay >>= (return . addDays (-1))
+  | dayString == "tomorrow" = addDays 1 <$> getDay
+  | dayString == "yesterday" = addDays (-1) <$> getDay
   | dayString == "monday" = getDay >>= dayOfWeek 1
   | dayString == "mon" = getDay >>= dayOfWeek 1
   | dayString == "tuesday" = getDay >>= dayOfWeek 2
@@ -178,7 +178,7 @@ convertToDate str
     dayString = map toLower str
     dayOfWeek off day = do
       let (yr,wk,wday) = toWeekDate day
-      if (off <= wday)
+      if off <= wday
       then return . addDays 7 $ fromWeekDate yr wk off
       else return $ fromWeekDate yr wk off
 
@@ -194,7 +194,7 @@ convertToTime str
 
 -- |Convert all KV Due Dates that are strings into actual dates
 convertStringType :: (AppError m, MonadDate m) => StringTypes -> m StringTypes
-convertStringType (SKeyValue kv) = do
+convertStringType (SKeyValue kv) =
     case kv of
       KVString "due" val -> do
         converted <- convertToDate val
@@ -205,10 +205,8 @@ convertStringType (SKeyValue kv) = do
       KVString "at" val -> do
         converted <- convertToTime val
         return . SKeyValue $ KVAt converted
-      rest ->  do
-        return $ SKeyValue rest
-convertStringType rest = do
-  return rest
+      rest -> return $ SKeyValue rest
+convertStringType rest = return rest
 
 convertStringTypes :: (AppError m, MonadDate m) => [StringTypes] -> m [StringTypes]
 convertStringTypes alst = forM alst convertStringType

@@ -71,13 +71,13 @@ newtype AppM a = AppM {
             MonadArguments, MonadFileSystem, MonadDate)
 
 runApp :: Options -> AppM () -> IO ()
-runApp o app = either (T.putStrLn . renderError) (return . fst) =<< (runExceptT (runStateT (runAppM app) o))
+runApp o app = either (T.putStrLn . renderError) (return . fst) =<< runExceptT (runStateT (runAppM app) o)
 
 renderError :: ErrorType -> Text
 renderError (EInvalidIndex idx) = "todo: invalid index -- " <> T.pack (show idx)
-renderError (EInvalidIndexes idx) = "todo: invalid index -- " <> (T.intercalate ", " $ map (T.pack . show) idx)
+renderError (EInvalidIndexes idx) = "todo: invalid index -- " <> T.intercalate ", " (map (T.pack . show) idx)
 renderError (EInvalidArg arg) = "todo: invalid argument -- '" <> arg <> "'"
 renderError (EIOError e) = "todo: " <> T.pack (E.displayException e)
 renderError (EMiscError t) = "todo: " <> t
-renderError (EParseError pe) = "todo: parse error(s) -- " <> (T.pack $ show $ PE.errorPos pe) <> " " <> (T.intercalate "\n" $ map (T.pack . PE.messageString) $ PE.errorMessages pe)
+renderError (EParseError pe) = "todo: parse error(s) -- " <> T.pack (show $ PE.errorPos pe) <> " " <> T.intercalate "\n" (map (T.pack . PE.messageString) $ PE.errorMessages pe)
 renderError (EShortCircuit txt) = txt

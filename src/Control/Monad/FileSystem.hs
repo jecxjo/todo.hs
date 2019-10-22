@@ -48,9 +48,9 @@ instance (MonadFileSystem m, Monoid w) => MonadFileSystem (WriterT w m)
 instance MonadFileSystem IO where
   -- | The IO version of readFile creates a new file if one doesn't exist and
   -- returns an empty string.
-  readFile path = (doesFileExist $ T.unpack path)
+  readFile path = doesFileExist (T.unpack path)
                 >>= bool (T.writeFile (T.unpack path) T.empty >> return T.empty)
                          (T.readFile $ T.unpack path)
-  writeFile path str = T.writeFile (T.unpack path) str
-  appendFile path str = T.appendFile (T.unpack path) str
+  writeFile path = T.writeFile (T.unpack path)
+  appendFile path = T.appendFile (T.unpack path)
 

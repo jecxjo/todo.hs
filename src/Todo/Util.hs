@@ -27,7 +27,7 @@ import           System.IO (hSetBuffering, hGetBuffering, stdin, BufferMode(..))
 
 -- |subsetOf filters a list that contains a set of elements
 subsetOf :: (Eq a, Foldable t) => [a] -> t a -> Bool
-xs `subsetOf` ys = null $ filter (not . (`elem` ys)) xs
+xs `subsetOf` ys = not (any (not . (`elem` ys)) xs)
 
 -- |Remove file if it exists
 removeIfExists :: FilePath -> IO ()
@@ -59,7 +59,7 @@ digitCount x
 -- |Show Number with padding
 showPaddedNumber :: Char -> Int -> Int -> String
 showPaddedNumber c width number =
-  (take (width - (fromIntegral $ digitCount number)) $ repeat c) ++ show number
+  replicate (width - fromIntegral (digitCount number)) c ++ show number
 
 -- | Similar to maybe and bool, the notEmpty applies a function on a non-empty list
 notEmpty :: b -> ([a] -> b) -> [a] -> b
@@ -69,7 +69,7 @@ notEmpty emptyRes nonEmptyFn lst = bool emptyRes (nonEmptyFn lst) (0 < length ls
 maybeFilter :: (a -> Bool) -> [a] -> Maybe [a]
 maybeFilter fn lst = do
   let filtered = filter fn lst
-  bool Nothing (Just filtered) (length filtered /= 0)
+  bool Nothing (Just filtered) (not (null filtered))
 
 -- | Converts Maybe to Either
 maybeToEither :: e -> Maybe a -> Either e a

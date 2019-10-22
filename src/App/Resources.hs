@@ -7,6 +7,7 @@ module App.Resources (
     getLicense
   ) where
 
+import           Control.Applicative ((<$>))
 import qualified Data.ByteString as BS
 import           Data.FileEmbed
 import           Data.List (lookup)
@@ -17,7 +18,7 @@ resources :: [(FilePath, BS.ByteString)]
 resources = $(embedDir "res")
 
 getResource :: FilePath -> Maybe Text
-getResource path = fmap decodeUtf8 $ lookup path resources
+getResource path = decodeUtf8 <$> lookup path resources
 
 listResources :: [FilePath]
 listResources = map fst resources

@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Todo.Commands where
 
 import qualified Control.Exception as E
-import           Control.Monad (forM_, liftM2)
+import           Control.Monad (forM_, liftM2, join)
 import           Data.Bool (bool)
 import           Data.Maybe (maybe)
 import           Data.List (sort, nub, concatMap, sortBy)
@@ -68,24 +67,18 @@ process ("-p":rest) =
 -- | List all entries, ignoring thresholds
 -- Command Line: all "string to match" +Project @Context
 process ("all":filters) =
-  getAllTodo >>=
-  (return . filter (containsText filters . snd)) >>=
+  (filter (containsText filters . snd) <$> getAllTodo) >>=
   printTuple
 
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
 process ("list":filters) =
-  getPendingTodo >>=
-  filterThreshold >>=
-  (return . filter (containsText filters . snd)) >>=
+  (filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
   printTuple
 
 -- |List priority entries with project and context filters
 process ("listpriority":filters) =
-    getPendingTodo >>=
-    filterThreshold >>=
-    (return . filter (onlyPriority . snd)) >>=
-    (return . filter (containsText filters . snd)) >>=
+    (filter (onlyPriority . snd) . filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
     printTuple
   where
     onlyPriority (Incomplete (Just _) _ _) = True
@@ -93,17 +86,14 @@ process ("listpriority":filters) =
 
 -- |search for tasks matching regex
 process ("search":filters) =
-    getPendingTodo >>=
-    filterThreshold >>=
-    (return . filter (matchFn . show . snd)) >>=
+    (filter (matchFn . show . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
     printTuple
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
 -- | Search for tasks matching regex ignoring threshold
 process ("searchall":filters) =
-    getAllTodo >>=
-    (return . filter (matchFn . show . snd)) >>=
+    (filter (matchFn . show . snd) <$> getAllTodo) >>=
     printTuple
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
@@ -111,8 +101,7 @@ process ("searchall":filters) =
 -- |search completed tasks matching regex
 -- Command Line: searchcompleted "foo"
 process ("searchcompleted":filters) =
-    getCompletedTodo >>=
-    (return . filter (matchFn . show . snd)) >>=
+    (filter (matchFn . show . snd) <$> getCompletedTodo) >>=
     printTuple
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
@@ -124,7 +113,7 @@ process ("add":rest) = do
   todo <- convertTaskStrings line
   allTasks <- getAllTodo
   let newList = [(0, todo)] <> allTasks
-  bool (shortCircuit "Nothing Added") (writeTodo newList) =<< (queryConfirm [todo] "Add")
+  bool (shortCircuit "Nothing Added") (writeTodo newList) =<< queryConfirm [todo] "Add"
   liftIO . putStrLn $ "ADDED: " ++ show todo
 
 -- |Add completed task to list
@@ -136,123 +125,122 @@ process ("addx":rest) = do
   now <- getDay
   let todo' = Completed now todo
   let newList = [(0, todo')] <> allTasks
-  bool (shortCircuit "Nothing Completed") (writeTodo newList) =<< (queryConfirm [todo] "Complete")
+  bool (shortCircuit "Nothing Completed") (writeTodo newList) =<< queryConfirm [todo] "Complete"
   liftIO . putStrLn $ "COMPLETED: " ++ show todo'
 
 -- |Delete task
 -- Command Line: delete 1 3
 process("delete":idx) = do
-  (match, nonMatch) <- splitIndexTasks <$> (mapM readIndex idx) <*> getPendingTodo >>= id
-  bool (throwError $ EMiscError "No tasks were deleted") ((replacePending nonMatch) *> (liftIO $ putStrLn "Task Deleted")) =<< (queryAction (map snd match) "Delete")
+  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
+  bool (throwError $ EMiscError "No tasks were deleted") (replacePending nonMatch *> liftIO $ putStrLn "Task Deleted") =<< queryAction (map snd match) "Delete"
 
 -- |Mark Task Complete
 -- Command Line: complete 1
-process ("complete":idx:[]) = do
-  (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+process ["complete", idx] = do
+  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   now <- getDay
   let completed = map (\(i, t) -> (i, Completed now t)) match
-  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< (queryConfirm (map (\(_,t) -> t) match) "Complete")
+  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
   liftIO $ putStrLn "Task Completed"
 
 process ("complete":idx) = do
-  (match, nonMatch) <- splitIndexTasks <$> (mapM readIndex idx) <*> getPendingTodo >>= id
+  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
   now <- getDay
   let completed = map (\(i, t) -> (i, Completed now t)) match
-  bool (throwError $ EMiscError "No tasks were completed") ((replacePending (nonMatch <> completed)) *> (liftIO $ putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+  bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
 
 -- |List only completed tasks
 -- Command Line: completed
-process ("completed":[]) = getCompletedTodo >>= printTuple
+process ["completed"] = getCompletedTodo >>= printTuple
 
 -- |Append to a currently existing task
 -- Command Line: append 1 Text to add to task 1
 process ("append":idx:rest) = do
-    (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
     appended <- applyRest match
     let numbered = zipWith (\i t -> (i, t)) [1..] appended
-    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm appended "Modify")
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< queryConfirm appended "Modify"
     printPrefixedTuple "Task Modified" numbered
   where
-    applyRest indexedTask = mapM doRest (map snd indexedTask)
-    doRest t = either (throwError . EParseError) convertTaskStrings $ validateLine (show t <> " " <> (T.unpack $ T.unwords rest))
+    applyRest = mapM (doRest . snd)
+    doRest t = either (throwError . EParseError) convertTaskStrings $ validateLine (show t <> " " <> T.unpack (T.unwords rest))
 
 -- |Prepend to a currently existing task
 -- Command Line: prepend 1 Text to add to task 1
 process ("prepend":idx:rest) = do
-    (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
     prepended <- applyRest match
     let numbered = zipWith (\i t -> (i, t)) [1..] prepended
-    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm prepended "Modify")
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< queryConfirm prepended "Modify"
     printPrefixedTuple "Task Modified" numbered
   where
-    applyRest indexedTask = mapM doRest (map snd indexedTask)
-    doRest t = either (throwError . EParseError) convertTaskStrings $ validateLine ((T.unpack $ T.unwords rest) <> " " <> show t)
+    applyRest = mapM (doRest . snd)
+    doRest t = either (throwError . EParseError) convertTaskStrings $ validateLine (T.unpack (T.unwords rest) <> " " <> show t)
 
 -- |Replace existing task with text
 -- Command Line: replace 1 "New text for task 1"
 process ("replace":idx:rest) = do
-  (_, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+  (_, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   line <- either (throwError . EParseError) return $ validateLine . T.unpack $ T.unwords rest
   todo <- convertTaskStrings line
   let newList = [(0, todo)] <> nonMatch
-  bool (shortCircuit "Nothing to modify") (writeTodo newList) =<< (queryConfirm [todo] "Replace")
+  bool (shortCircuit "Nothing to modify") (writeTodo newList) =<< queryConfirm [todo] "Replace"
   liftIO . putStrLn $ "Task Replaced: " ++ show todo
 
 -- |Does a Regex find and swap with text
 -- Command Line: swap 1 "old text" "new text"
-process ("swap":idx:oldText:newText:[]) = do
-    (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+process ["swap", idx, oldText, newText] = do
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
     swapped <- applySwap match
     let numbered = zipWith (\i t -> (i, t)) [1..] swapped
-    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm swapped "Modify")
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< queryConfirm swapped "Modify"
     printPrefixedTuple "Task Modified" numbered
   where
-    applySwap indexedTasks = mapM doSwap (map snd indexedTasks)
+    applySwap = mapM (doSwap . snd)
     swapFn = swapGen (T.unpack oldText) (T.unpack newText)
     doSwap t = either (throwError . EParseError) convertTaskStrings $ validateLine (swapFn $ show t)
 
 -- |Modifies the priority of a previously existing task
 -- Command Line: priorty 1 B
-process ("priority":idx:priority:[]) = do
-    (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+process ["priority", idx, priority] = do
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
     char <- bool (throwError $ EInvalidArg "Priority must be a letter")  (return $ T.head $ T.toUpper priority) $ T.length priority == 1
     changed <- applyPri char match
     let numbered = zipWith (\i t -> (i, t)) [1..] changed
-    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< (queryConfirm changed "Modify")
+    bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< queryConfirm changed "Modify"
     printPrefixedTuple "Task Modified" numbered
   where
-    applyPri char indexedTask = mapM (doPri char) (map snd indexedTask)
+    applyPri char = mapM (doPri char . snd)
     doPri char (Incomplete _ mDay stx) = either (throwError . EParseError) convertTaskStrings $ validateLine $ show (Incomplete (Just char) mDay stx)
 
-process ("priority":idx:[]) = do
-  (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+process ["priority", idx] = do
+  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   let changed = map (\(i, Incomplete _ mDay stx) -> (i, Incomplete Nothing mDay stx)) match
-  bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> changed)) =<< (queryConfirm (map snd changed) "Modify")
+  bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> changed)) =<< queryConfirm (map snd changed) "Modify"
   printPrefixedTuple "Task Modified" changed
 
 -- | List only due tasks
-process ("due":[]) = do
+process ["due"] = do
     todo <- getPendingTodo
     now <- getDay
     let due = filterTupleDueDate now todo
     printTuple due
 
 -- | Archive all completed tasks
-process ("archive":[]) = do
+process ["archive"] = do
   getCompletedTodo >>= writeArchive
   replaceCompleted []
   liftIO $ putStrLn "Tasks Archived"
 
 -- | Search archived tasks
 process ("searcharchived":filters) =
-    getArchivedTodo >>=
-    (return . filter (matchFn . show . snd)) >>=
+    (filter (matchFn . show . snd) <$> getArchivedTodo) >>=
     printTuple
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
 -- | Generate report
-process ("report":[]) = do
+process ["report"] = do
   process ["archive"] -- Do Archive first
   pendingCount <- length <$> getPendingTodo
   archivedCount <- length <$> getArchivedTodo
@@ -260,7 +248,7 @@ process ("report":[]) = do
   liftIO $ putStrLn $ "Report Created: " ++ show pendingCount ++ " " ++ show archivedCount
 
 -- | List tasks based on project
-process ("projects":[]) = do
+process ["projects"] = do
   pending <- getPendingTodo
   let splitTodo = concatMap splitTodoFn pending
   let projects = nub . sort $ map (\(p,_,_) -> p) splitTodo
@@ -273,19 +261,19 @@ process ("projects":[]) = do
       liftIO $ putStrLn ""
 
 -- | Repeat a task by creating a new task and completing the original
-process ("repeat":idx:[]) = do
-  (match, nonMatch) <- splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo >>= id
+process ["repeat", idx] = do
+  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   now <- getDay
   let completed = map (\(i,t) -> (i, Completed now t)) match
   let new = map (\(i, Incomplete pri date str) -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) date) str)) match
   let newList = new <> nonMatch <> completed
-  bool (shortCircuit "Nothing changed") (replacePending newList) =<< (queryConfirm (map snd new) "Repeat")
+  bool (shortCircuit "Nothing changed") (replacePending newList) =<< queryConfirm (map snd new) "Repeat"
   liftIO $ putStrLn "Tasks Repeated"
 
 -- | Print stuff completed yesterday and stuff due for today
-process ("standup":[]) = do
+process ["standup"] = do
     todo <- getPendingTodo
-    completed <- (liftM2 (++) getArchivedTodo getCompletedTodo)
+    completed <- liftM2 (++) getArchivedTodo getCompletedTodo
     now <- getDay
     let yesterday = addDays (-1) now
 
@@ -305,15 +293,15 @@ process ("standup":[]) = do
     printList due
     liftIO $ putStrLn ""
   where
-    remove' (_, (Completed _ task)) = task
+    remove' (_, Completed _ task) = task
     remove' (_, task) = task
     removeIndex = map remove'
 
     printList :: (Show a, MonadIO m) => [a] -> m ()
-    printList lst = forM_ lst (\t -> liftIO . putStrLn $ show t)
+    printList lst = forM_ lst (liftIO . print)
 
 -- |Print tasks due today, ordered by "at:HHMM"
-process ("today":[]) = do
+process ["today"] = do
     todo <- getAllTodo
     now <- getDay
     let forToday = filterTupleDueDate now todo
@@ -324,29 +312,29 @@ process ("today":[]) = do
   where
     byAt (_, a) (_, b) =
       case (a, b) of
-        ((Incomplete _ _ aKV),(Completed _ (Incomplete _ _ bKV))) -> compare (extractAt aKV) (extractAt bKV)
-        ((Completed _ (Incomplete _ _ aKV)),(Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
-        ((Incomplete _ _ aKV),(Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
-        ((Completed _ (Incomplete _ _ aKV)),(Completed _ (Incomplete _ _ bKV))) -> compare (extractAt aKV) (extractAt bKV)
+        (Incomplete _ _ aKV, Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
+        (Completed _ (Incomplete _ _ aKV), Incomplete _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
+        (Incomplete _ _ aKV, Incomplete _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
+        (Completed _ (Incomplete _ _ aKV), Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
         _ -> EQ -- Don't care at that point its all screwed up
 
 -- |Help output
 -- Command Line: help
-process ("usage":[]) = liftIO $ T.putStrLn usage
-process ("help":rest:[]) = liftIO $ T.putStrLn $ helpTopics rest
-process ("help":[]) = liftIO $ T.putStrLn commandList
+process ["usage"] = liftIO $ T.putStrLn usage
+process ["help",rest] = liftIO $ T.putStrLn $ helpTopics rest
+process ["help"] = liftIO $ T.putStrLn commandList
 
 -- | Show Version
 -- Command Line: version
-process ("version":[]) = liftIO . putStrLn $ "Version: " ++ showVersion version
+process ["version"] = liftIO . putStrLn $ "Version: " ++ showVersion version
 
 -- | Show license
 -- Command Line: license
-process ("license":[]) = liftIO $ T.putStrLn license
+process ["license"] = liftIO $ T.putStrLn license
 
 -- | Show changelog
 -- Command Line: changelog
-process ("changelog":[]) = liftIO $ T.putStrLn changelog
+process ["changelog"] = liftIO $ T.putStrLn changelog
 
 -- | Aliases
 process ("remove":rest) = process ("delete":rest)
@@ -372,7 +360,7 @@ process ("test":d:_) = do
   liftIO . putStrLn $ show today
 
 -- | Passing just a number prints index
-process (idx:[]) = do
+process [idx] = do
   idx' <- maybe (throwError $ EInvalidArg idx) return (maybeRead (T.unpack idx) :: Maybe Int)
   pending <- getPendingTodo
   notEmpty (throwError $ EInvalidIndex idx') printTuple $ filter ((== idx') . fst) pending
