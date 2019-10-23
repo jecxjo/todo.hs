@@ -101,7 +101,7 @@ getPendingTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [
 getPendingTodo = do
   path <- T.pack . todoTxtPath <$> get
   tasks <- readFileSafe path >>=
-              (either (throwError . EParseError) return . parseLines (T.unpack path) T.unpack)
+              either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let pending = sort $ filter isIncomplete tasks
   return $ zip [1..] pending
 
@@ -110,7 +110,7 @@ getCompletedTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m
 getCompletedTodo = do
   path <- T.pack . todoTxtPath <$> get
   tasks <- readFileSafe path >>=
-              (either (throwError . EParseError) return . parseLines (T.unpack path) T.unpack)
+              either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let completed = sort $ filter isCompleted tasks
   return $ zip [1..] completed
 
@@ -119,7 +119,7 @@ getAllTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [(Int
 getAllTodo = do
   path <- T.pack . todoTxtPath <$> get
   tasks <- readFileSafe path >>=
-              (either (throwError . EParseError) return . parseLines (T.unpack path) T.unpack)
+              either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let all = sort tasks
   return $ zip [1..] all
 
@@ -130,7 +130,7 @@ getArchivedTodo = do
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
   tasks <- readFileSafe (T.pack path) >>=
-              (either (throwError . EParseError) return . parseLines path . T.unpack lines)
+              either (throwError . EParseError) return . parseLines path . T.unpack
   let sorted = sort tasks
   return $ zip [1..] sorted
 
@@ -203,8 +203,8 @@ getNotIndexTasks index tasks = maybe (throwError $ EInvalidIndex index) return $
 
 splitIndexTasks :: (AppError m) => [Int] -> [(Int, Task)] -> m ([(Int, Task)], [(Int, Task)])
 splitIndexTasks indexes tasks = do
-  let matches = filter (`elem` indexes) . fst tasks
-  let nonMatches = filter (`notElem` indexes) . fst tasks
+  let matches = filter ((`elem` indexes) . fst) tasks
+  let nonMatches = filter ((`notElem` indexes) . fst) tasks
   if length matches == length indexes
   then return (matches, nonMatches)
   else throwError $ EInvalidIndexes $ filter (`notElem` map fst matches) indexes

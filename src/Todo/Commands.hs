@@ -132,7 +132,7 @@ process ("addx":rest) = do
 -- Command Line: delete 1 3
 process("delete":idx) = do
   (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
-  bool (throwError $ EMiscError "No tasks were deleted") (replacePending nonMatch *> liftIO $ putStrLn "Task Deleted") =<< queryAction (map snd match) "Delete"
+  bool (throwError $ EMiscError "No tasks were deleted") (replacePending nonMatch *> liftIO (putStrLn "Task Deleted")) =<< queryAction (map snd match) "Delete"
 
 -- |Mark Task Complete
 -- Command Line: complete 1
