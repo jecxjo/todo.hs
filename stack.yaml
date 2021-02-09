@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-11.1
+resolver: lts-16.10
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,6 +41,8 @@ packages:
 extra-deps:
 - github: jecxjo/test-fixture
   commit: 63446eabefc9211c4a4e7312ab138f7d310960f2
+#- effet-0.2.0.0@sha256:3d51847139742380e41518fb5a54c93cbb16050fb50cf342a24c073b0f804a35,2230
+
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 # extra-deps: []
