@@ -1,31 +1,41 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-module Control.Monad.Date (MonadDate(..)) where
+module Control.Monad.Date where
 
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.Reader (ReaderT)
-import           Control.Monad.State (StateT)
-import           Control.Monad.Writer (WriterT)
-import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Data.Time (getCurrentTime, utctDay, UTCTime(..))
-import           Data.Time.Calendar (Day(..))
+import Control.Monad.Freer
+  ( type (~>)
+  , Eff
+  , LastMember
+  , Member
+  , interpret
+  , interpretM
+  , send
+  )
+import Control.Monad.Freer.Reader (Reader, asks, ask)
+import Data.Time (getCurrentTime, utctDay, UTCTime(..))
+import Data.Time.Calendar (Day(..))
 
-class Monad m => MonadDate m where
-  getDay :: m Day
-  getUTCTime :: m UTCTime
+data Date r where
+  GetDay :: Date Day
+  GetUTCTime :: Date UTCTime
 
-  default getDay :: (MonadTrans t, MonadDate m', m ~ t m') => m Day
-  getDay = lift getDay
+getDay :: Member Date effs => Eff effs Day
+getDay = send GetDay
 
-  default getUTCTime :: (MonadTrans t, MonadDate m', m ~ t m') => m UTCTime
-  getUTCTime = lift getUTCTime
+getUTCTime :: Member Date effs => Eff effs UTCTime
+getUTCTime = send GetUTCTime
 
-instance MonadDate m => MonadDate (ExceptT e m)
-instance MonadDate m => MonadDate (ReaderT r m)
-instance MonadDate m => MonadDate (StateT s m)
-instance (MonadDate m, Monoid w) => MonadDate (WriterT w m)
+interpretIO :: (LastMember IO effs, Member IO effs) => Eff (Date ': effs) ~> Eff effs
+interpretIO = interpretM (\case
+                            GetDay -> utctDay <$> getCurrentTime
+                            GetUTCTime -> getCurrentTime)
 
-instance MonadDate IO where
-  getDay = utctDay <$> getCurrentTime
-  getUTCTime = getCurrentTime
+interpretPure :: Member (Reader (Day, UTCTime)) effs => Eff (Date ': effs) ~> Eff effs
+interpretPure = interpret (\case
+                              GetDay -> ask >>= fst
+                              GetUTCTime -> ask >>= snd)
+

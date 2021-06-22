@@ -1,29 +1,35 @@
-{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
-module Control.Monad.Arguments (
-    MonadArguments(..)
-  ) where
+module Control.Monad.Arguments where
 
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.Reader (ReaderT)
-import           Control.Monad.State (StateT)
-import           Control.Monad.Writer (WriterT)
-import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Data.Text (Text)
+import Control.Monad.Freer
+  ( type (~>)
+  , Eff
+  , LastMember
+  , Member
+  , interpret
+  , interpretM
+  , send
+  )
+import Control.Monad.Freer.Reader (Reader, ask)
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified System.Environment as IO
 
-class Monad m => MonadArguments m where
-  getArgs :: m [Text]
+data Arguments r where
+  GetArgs :: Arguments [Text]
 
-  default getArgs :: (MonadTrans t, MonadArguments m', m ~ t m') => m [Text]
-  getArgs = lift getArgs
+getArgs :: Member Arguments effs => Eff effs [Text]
+getArgs = send GetArgs
 
-instance MonadArguments m => MonadArguments (ExceptT e m)
-instance MonadArguments m => MonadArguments (ReaderT r m)
-instance MonadArguments m => MonadArguments (StateT s m)
-instance (MonadArguments m, Monoid w) => MonadArguments (WriterT w m)
+interpretIO :: (LastMember IO effs, Member IO effs) => Eff (Arguments ': effs) ~> Eff effs
+interpretIO = interpretM (\case
+                            GetArgs -> map T.pack <$> IO.getArgs)
 
-instance MonadArguments IO where
-  getArgs = map T.pack <$> IO.getArgs
+interpretPure :: Member (Reader [Text]) effs => Eff (Arguments ': effs) ~> Eff effs
+interpretPure = interpret (\case
+                              GetArgs -> ask)

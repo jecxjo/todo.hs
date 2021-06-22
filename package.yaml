@@ -35,6 +35,7 @@ dependencies:
 - monad-control
 - file-embed
 - bytestring
+- freer-simple
 
 library:
   source-dirs: src
