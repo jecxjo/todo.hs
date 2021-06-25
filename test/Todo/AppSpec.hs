@@ -21,7 +21,7 @@ spec =
   describe "Todo.App" $ do
     describe "emptyOptions" $ do
       it "is all empty values" $ do
-        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing False
+        emptyOptions `shouldBe` Options "" Nothing Nothing Nothing Nothing False False
 
       it "accesses todoTxtPath" $ do
         todoTxtPath emptyOptions `shouldBe` ""
@@ -41,9 +41,12 @@ spec =
       it "acccess forcedPrompt" $ do
         forcedPrompt emptyOptions `shouldBe` False
 
+      it "access prettyPrinting" $ do
+        prettyPrinting emptyOptions `shouldBe` False
+
     describe "initOptions" $ do
       it "is empty with default path" $ do
-        initOptions "todo.txt" `shouldBe` Options "todo.txt" Nothing Nothing Nothing Nothing False
+        initOptions "todo.txt" `shouldBe` Options "todo.txt" Nothing Nothing Nothing Nothing False False
 
     describe "renderError" $ do
       it "displays invalid index" $ do

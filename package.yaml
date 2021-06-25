@@ -1,5 +1,5 @@
 name:                todo
-version:             0.4.5.0
+version:             0.4.5.1
 github:              "jecxjo/todo.hs"
 license:             BSD3
 author:              "Jeff Parent"
@@ -35,6 +35,7 @@ dependencies:
 - monad-control
 - file-embed
 - bytestring
+- pretty-terminal
 
 library:
   source-dirs: src
