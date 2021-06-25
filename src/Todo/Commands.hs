@@ -16,6 +16,8 @@ import           Data.Text (Text)
 import           Data.Time.Calendar (addDays)
 import           Data.Version (showVersion)
 import           Paths_todo (version)
+import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
+import           Text.Color
 import           Todo.App
 import           Todo.Commands.Helpers
 import           Todo.HelpInfo
@@ -33,7 +35,8 @@ parseArgs = getArgs >>= process
 process :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadDate m) => [Text] -> m ()
 
 -- | No args -> Print todo list
-process [] = getPendingTodo >>= filterThreshold >>= printTuple
+--process [] = getPendingTodo >>= filterThreshold >>= (printTuple =<< (prettyPrinting <$> get))
+process [] = (prettyPrinting <$> get) >>= (\pretty -> getPendingTodo >>= filterThreshold >>= printTuple pretty)
 
 -- | Flag for passing in the location of the todo.txt file
 process ("-t":path:rest) =
@@ -67,54 +70,61 @@ process ("-p":rest) =
 -- | List all entries, ignoring thresholds
 -- Command Line: all "string to match" +Project @Context
 process ("all":filters) =
-  (filter (containsText filters . snd) <$> getAllTodo) >>=
-  printTuple
+  (prettyPrinting <$> get) >>= \pretty ->
+      (filter (containsText filters . snd) <$> getAllTodo) >>=
+      printTuple pretty
 
 -- |List entries with project and context filter
 -- Command Line: list "string to match" +Project @Context
 process ("list":filters) =
-  (filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
-  printTuple
+  (prettyPrinting <$> get) >>= \pretty ->
+      (filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
+      printTuple pretty
 
 -- |List priority entries with project and context filters
 process ("listpriority":filters) =
-    (filter (onlyPriority . snd) . filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
-    printTuple
+    (prettyPrinting <$> get) >>= \pretty ->
+        (filter (onlyPriority . snd) . filter (containsText filters . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
+        printTuple pretty
   where
     onlyPriority (Incomplete (Just _) _ _) = True
     onlyPriority _ = False
 
 -- |search for tasks matching regex
 process ("search":filters) =
-    (filter (matchFn . show . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
-    printTuple
+    (prettyPrinting <$> get) >>= \pretty ->
+        (filter (matchFn . show . snd) <$> (getPendingTodo >>= filterThreshold)) >>=
+        printTuple pretty
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
 -- | Search for tasks matching regex ignoring threshold
 process ("searchall":filters) =
-    (filter (matchFn . show . snd) <$> getAllTodo) >>=
-    printTuple
+    (prettyPrinting <$> get) >>= \pretty ->
+        (filter (matchFn . show . snd) <$> getAllTodo) >>=
+        printTuple pretty
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
 -- |search completed tasks matching regex
 -- Command Line: searchcompleted "foo"
 process ("searchcompleted":filters) =
-    (filter (matchFn . show . snd) <$> getCompletedTodo) >>=
-    printTuple
+    (prettyPrinting <$> get) >>= \pretty ->
+        (filter (matchFn . show . snd) <$> getCompletedTodo) >>=
+        printTuple pretty
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
 -- |Add task to list
 -- Command Line: add Example Task for +Project with @Context
 process ("add":rest) = do
+  pretty <- prettyPrinting <$> get
   line <- either (throwError . EParseError) return $ validateLine . T.unpack $ T.unwords rest
   todo <- convertTaskStrings line
   allTasks <- getAllTodo
   let newList = [(0, todo)] <> allTasks
-  bool (shortCircuit "Nothing Added") (writeTodo newList) =<< queryConfirm [todo] "Add"
-  liftIO . putStrLn $ "ADDED: " ++ show todo
+  bool (shortCircuit (if pretty then (color Yellow "Nothing Added") else "Nothing Added")) (writeTodo newList) =<< queryConfirm [todo] "Add"
+  liftIO . putStrLn $ if pretty then (color Green "ADDED: " ++ showColor todo) else ("ADDED: " ++ show todo)
 
 -- |Add completed task to list
 -- Command Line: addx Example Task that is done
@@ -151,7 +161,7 @@ process ("complete":idx) = do
 
 -- |List only completed tasks
 -- Command Line: completed
-process ["completed"] = getCompletedTodo >>= printTuple
+process ["completed"] = (prettyPrinting <$> get ) >>= \pretty -> getCompletedTodo >>= printTuple pretty
 
 -- |Append to a currently existing task
 -- Command Line: append 1 Text to add to task 1
@@ -221,10 +231,11 @@ process ["priority", idx] = do
 
 -- | List only due tasks
 process ["due"] = do
+    pretty <- prettyPrinting <$> get
     todo <- getPendingTodo
     now <- getDay
     let due = filterTupleDueDate now todo
-    printTuple due
+    printTuple pretty due
 
 -- | Archive all completed tasks
 process ["archive"] = do
@@ -234,8 +245,9 @@ process ["archive"] = do
 
 -- | Search archived tasks
 process ("searcharchived":filters) =
-    (filter (matchFn . show . snd) <$> getArchivedTodo) >>=
-    printTuple
+    (prettyPrinting <$> get) >>= \pretty ->
+        (filter (matchFn . show . snd) <$> getArchivedTodo) >>=
+        printTuple pretty
   where
     matchFn = matchGen $ T.unpack $ T.unwords filters
 
@@ -249,15 +261,16 @@ process ["report"] = do
 
 -- | List tasks based on project
 process ["projects"] = do
+  pretty <- prettyPrinting <$> get
   pending <- getPendingTodo
   let splitTodo = concatMap splitTodoFn pending
   let projects = nub . sort $ map (\(p,_,_) -> p) splitTodo
-  forM_ projects (printProjects splitTodo)
+  forM_ projects (printProjects pretty splitTodo)
   where
     splitTodoFn (i, t) = map (\p -> (p, i, t)) (filter (\x -> head x == '+') (words $ replace '.' '-' $ show t))
-    printProjects tasks project = do
+    printProjects pretty tasks project = do
       liftIO $ putStrLn $ "==== " ++ project ++ " ===="
-      printTuple $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == project) tasks
+      printTuple pretty $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == project) tasks
       liftIO $ putStrLn ""
 
 -- | Repeat a task by creating a new task and completing the original
@@ -302,13 +315,14 @@ process ["standup"] = do
 
 -- |Print tasks due today, ordered by "at:HHMM"
 process ["today"] = do
+    pretty <- prettyPrinting <$> get
     todo <- getAllTodo
     now <- getDay
     let forToday = filterTupleDueDate now todo
     let sorted = sortBy byAt forToday
     liftIO $ putStrLn $ "Today: " ++ show now
     liftIO $ putStrLn "-----------------"
-    printTuple sorted
+    printTuple pretty sorted
   where
     byAt (_, a) (_, b) =
       case (a, b) of
@@ -361,9 +375,10 @@ process ("test":d:_) = do
 
 -- | Passing just a number prints index
 process [idx] = do
+  pretty <- prettyPrinting <$> get
   idx' <- maybe (throwError $ EInvalidArg idx) return (maybeRead (T.unpack idx) :: Maybe Int)
   pending <- getPendingTodo
-  notEmpty (throwError $ EInvalidIndex idx') printTuple $ filter ((== idx') . fst) pending
+  notEmpty (throwError $ EInvalidIndex idx') (printTuple pretty) $ filter ((== idx') . fst) pending
 
 -- | Fail over
 process _ = throwError . EMiscError $ T.pack "Invalid argument"

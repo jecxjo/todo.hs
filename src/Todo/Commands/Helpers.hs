@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Todo.Commands.Helpers (
     defaultTodoName,
@@ -46,6 +47,7 @@ import           Prelude hiding (readFile, writeFile)
 import           System.Directory (getHomeDirectory)
 import           System.FilePath (joinPath, replaceFileName)
 import           System.IO (hFlush, stdout)
+import           Text.Color
 import           Todo.App
 import           Todo.Parser
 import           Todo.Tasks
@@ -69,10 +71,10 @@ todoFilePath = do
   return $ joinPath [ home, defaultTodoName ]
 
 -- |Print a numbered array
-printTuple :: (Show a, MonadIO m) => [(Int, a)] -> m ()
-printTuple lst = forM_ lst print'
+printTuple :: (Show a, ShowColor a, MonadIO m) => Bool -> [(Int, a)] -> m ()
+printTuple useColor lst = forM_ lst print'
   where width = fromIntegral $ digitCount $ maximum $ map fst lst
-        print' (n, t) = liftIO . putStrLn $ showPaddedNumber ' ' width n ++ ": " ++ show t
+        print' (n, t) = liftIO . putStrLn $ showPaddedNumber ' ' width n ++ ": " ++ (if useColor then showColor t else show t)
 
 -- | Print tasks with prefixed message
 printPrefixedTuple :: (Show a, MonadIO m) => Text -> [(Int, a)] -> m ()

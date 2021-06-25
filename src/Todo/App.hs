@@ -41,16 +41,17 @@ data Options = Options {
                        , timeStamp :: Maybe Day
                        , autoAccept :: Maybe Bool
                        , forcedPrompt :: Bool
+                       , prettyPrinting :: Bool
                        }
                        deriving (Show, Eq)
 
 type AppConfig = MonadState Options
 
 emptyOptions :: Options
-emptyOptions = Options "" Nothing Nothing Nothing Nothing False
+emptyOptions = Options "" Nothing Nothing Nothing Nothing False False
 
-initOptions :: FilePath -> Options
-initOptions path = Options path Nothing Nothing Nothing Nothing False
+initOptions :: FilePath -> Bool -> Options
+initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting
 
 data ErrorType
   = EInvalidIndex Int

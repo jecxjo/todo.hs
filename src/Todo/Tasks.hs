@@ -31,8 +31,10 @@ import           Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid, midday,
 import           Data.Traversable (forM)
 import qualified Data.Text as T
 import           Data.Text (Text)
+import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
+import           Text.Color (ShowColor(..))
 import           Todo.Util (subsetOf, showPaddedNumber)
-import           Todo.App (MonadDate, AppError, getDay, throwError, ErrorType(..))
+import           Todo.App (MonadDate, AppConfig, AppError, getDay, throwError, ErrorType(..))
 
 -- |Priority: (A)
 type Priority = Char
@@ -56,6 +58,12 @@ instance Show KeyValue where
   show (KVAt (TimeOfDay hr min _)) = "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 min
   show (KVString key value) = key ++ ":" ++ value
 
+instance ShowColor KeyValue where
+  showColor (KVDueDate date) = bgColor Red $ "due:" ++ show date
+  showColor (KVThreshold date) = bgColor Yellow $ color Blue $ "t:" ++ show date
+  showColor (KVAt (TimeOfDay hr min _)) = bgColor Blue $ "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 min
+  showColor (KVString key value) = key ++ ":" ++ value
+
 
 -- |String Types
 data StringTypes = SProject Project
@@ -70,8 +78,17 @@ instance Show StringTypes where
   show (SKeyValue kv) = show kv
   show (SOther s) = s
 
+instance ShowColor StringTypes where
+  showColor (SProject p) = color Blue $ "+" ++ p
+  showColor (SContext c) = color Blue $ "@" ++ c
+  showColor (SKeyValue kv) = showColor kv
+  showColor (SOther s) = s
+
 unrollStringTypes :: [StringTypes] -> String
 unrollStringTypes = unwords . map show
+
+unrollColorStringTypes :: [StringTypes] -> String
+unrollColorStringTypes = unwords . map showColor
 
 getProjects :: [StringTypes] -> [Project]
 getProjects = map (\(SProject p) -> p) . filter fn
@@ -117,6 +134,17 @@ instance Show Task where
           showPriority Nothing = ""
           showDate (Just d) = show d ++ " "
           showDate Nothing = ""
+
+instance ShowColor Task where
+  showColor (Completed date task) = (color Red "x ") ++ show date ++ " " ++ showColor task
+  showColor (Incomplete mPriority mDate sx) = showPriority mPriority
+                                                ++ showDate mDate
+                                                ++ unrollColorStringTypes sx
+    where showPriority (Just p) = color Magenta $ "(" ++ [p] ++ ") "
+          showPriority Nothing = ""
+          showDate (Just d) = show d ++ " "
+          showDate Nothing = ""
+
 
 -- |Comparisons are done based on priority
 instance Eq Task where
