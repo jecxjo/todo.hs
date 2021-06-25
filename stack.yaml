@@ -39,8 +39,12 @@ packages:
 - .
 
 extra-deps:
-- github: jecxjo/test-fixture
-  commit: 5ed021570c8585792455a227da07538095a36108
+- HMock-0.2.0.0
+- constraints-0.13@sha256:d341eb4adbf712f928706928d23a173fb3d0976f0dfaf6a274958975d5fc9e75,2338
+- syb-0.7.2.1@sha256:bf42655a213402215299e435c52f799e76cbec0b984cd7153d6b9af8a1c0803f,3815
+- unliftio-0.2.18@sha256:87fb541127d21939d3efc49ed9bc3df6eadc9eb06ffa7755fc857f62e15daf20,3395
+# - github: cdsmith/HMock
+#   commit: 8456c34b159aee2b790618f59bd67610f71b144b
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 # extra-deps: []

@@ -5,16 +5,33 @@
 
 packages:
 - completed:
-    size: 18164
-    url: https://github.com/jecxjo/test-fixture/archive/5ed021570c8585792455a227da07538095a36108.tar.gz
-    name: test-fixture
-    version: 0.5.1.0
-    sha256: de1f3dd19bbd96030bec22d9e63962dd9ec10ab8e3116d4984f95b27a51c8fbd
+    hackage: HMock-0.2.0.0@sha256:9b340a4924cdbc7c6187a617a15a7e46a5638b269063d5048a292b1bdcbdd2be,3903
     pantry-tree:
-      size: 1355
-      sha256: b850fcca37026a9dcc95e5aecba999b41498d488e7b66da79c88c94c1dcab097
+      size: 2054
+      sha256: 7d7a4f425a7c026ac705811928fce634d5b845d3d8f9a33932f914a765f07ddc
   original:
-    url: https://github.com/jecxjo/test-fixture/archive/5ed021570c8585792455a227da07538095a36108.tar.gz
+    hackage: HMock-0.2.0.0
+- completed:
+    hackage: constraints-0.13@sha256:d341eb4adbf712f928706928d23a173fb3d0976f0dfaf6a274958975d5fc9e75,2338
+    pantry-tree:
+      size: 867
+      sha256: 1c77e76df6d1e569be38a305a07db1139cb071d866f25a4cee9b84bf7ab2e7a1
+  original:
+    hackage: constraints-0.13@sha256:d341eb4adbf712f928706928d23a173fb3d0976f0dfaf6a274958975d5fc9e75,2338
+- completed:
+    hackage: syb-0.7.2.1@sha256:bf42655a213402215299e435c52f799e76cbec0b984cd7153d6b9af8a1c0803f,3815
+    pantry-tree:
+      size: 3396
+      sha256: 3ee55cc33d69da2953e7093f99199fbc0bfa9d90dccd19cac101d09befa5bbb3
+  original:
+    hackage: syb-0.7.2.1@sha256:bf42655a213402215299e435c52f799e76cbec0b984cd7153d6b9af8a1c0803f,3815
+- completed:
+    hackage: unliftio-0.2.18@sha256:87fb541127d21939d3efc49ed9bc3df6eadc9eb06ffa7755fc857f62e15daf20,3395
+    pantry-tree:
+      size: 2423
+      sha256: 05c77d0992eb1a9008f0fb9aa5a8b6869881cccca8b9b531faab172f426960b5
+  original:
+    hackage: unliftio-0.2.18@sha256:87fb541127d21939d3efc49ed9bc3df6eadc9eb06ffa7755fc857f62e15daf20,3395
 snapshots:
 - completed:
     size: 533053
