@@ -67,6 +67,9 @@ process ("-n":rest) =
 process ("-p":rest) =
   modify (\st -> st { forcedPrompt = True }) >> process rest
 
+-- | Debug output
+process ("debug":rest) = get >>= printShowable
+
 -- | List all entries, ignoring thresholds
 -- Command Line: all "string to match" +Project @Context
 process ("all":filters) =

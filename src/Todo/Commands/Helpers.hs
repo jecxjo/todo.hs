@@ -7,6 +7,7 @@ module Todo.Commands.Helpers (
     defaultArchiveName,
     defaultReportName,
     todoFilePath,
+    printShowable,
     printTuple,
     printPrefixedTuple,
     readFileSafe,
@@ -69,6 +70,10 @@ todoFilePath :: IO FilePath
 todoFilePath = do
   home <- getHomeDirectory
   return $ joinPath [ home, defaultTodoName ]
+
+-- | Print Options
+printShowable :: (Show a, MonadIO m) => a -> m ()
+printShowable op = liftIO . putStrLn $ show op
 
 -- |Print a numbered array
 printTuple :: (Show a, ShowColor a, MonadIO m) => Bool -> [(Int, a)] -> m ()

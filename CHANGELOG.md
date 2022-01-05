@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Unreleased
 ### Added
 - Support for colored output
+- Added debug command
 
 ## [0.4.5] - 2021-01-13
 ### Changed
