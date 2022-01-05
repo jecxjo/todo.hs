@@ -1,13 +1,14 @@
 Usage: todo [-t path] [-s] action [task_number] [task_description]
        todo [task_number]
 Flags:
- -t path    Points to todo.txt
- -a path    Points to archive file
+ -t path    Points to todo.txt (or TODO_PATH)
+ -a path    Points to archive file (or TODO_ARCHIVE_PATH)
  -s         Auto timestamp new tasks
  -r path    Points to report file
  -y         Auto accept for any questions (like pressing Y)
  -n         Auto deny for any questions (like pressing N)
  -p         Force prompt for all task modifying commands
+ -S path    Points to addon scripts directory (or TODO_ADDON_PATH)
 
 Actions:
  add "Task I need to do +project @context"
@@ -34,6 +35,7 @@ Actions:
  repeat TASKNUM
  standup
  today
+ listaddons
  help COMMAND
  license
  changelog

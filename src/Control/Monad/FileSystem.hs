@@ -15,7 +15,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Prelude hiding (readFile, writeFile, appendFile)
-import           System.Directory (doesFileExist)
+import           System.Directory (doesFileExist, listDirectory)
 
 -- | A class of monads that can interact with the filesystem.
 class Monad m => MonadFileSystem m where
@@ -40,6 +40,12 @@ class Monad m => MonadFileSystem m where
   default appendFile :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> Text -> m ()
   appendFile path str = lift $ appendFile path str
 
+  -- | Lists files in a given path. If an error occurs, the method returns an error.
+  listFiles :: Text -> m [Text]
+
+  default listFiles :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m [Text]
+  listFiles path = lift $ listFiles path
+
 instance MonadFileSystem m => MonadFileSystem (ExceptT e m)
 instance MonadFileSystem m => MonadFileSystem (ReaderT r m)
 instance MonadFileSystem m => MonadFileSystem (StateT s m)
@@ -53,4 +59,5 @@ instance MonadFileSystem IO where
                          (T.readFile $ T.unpack path)
   writeFile path = T.writeFile (T.unpack path)
   appendFile path = T.appendFile (T.unpack path)
+  listFiles path = fmap (map T.pack) $ listDirectory $ T.unpack path
 

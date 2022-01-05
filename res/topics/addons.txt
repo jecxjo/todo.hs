@@ -1,0 +1,22 @@
+Addon Scripts
+-------------
+
+Addon support allows for adding commands without having to add them to the
+original code base. They can be written in any language, placing the compiled
+executable or executable script into a searchable directory. The addon is
+passed the environment variable TODO_PATH and optional command line arguments,
+the rest is up to the addon.
+
+Set environment variable TODO_ADDON_PATH or the command line argument -S to
+define the directory containing addons. Addons need to be marked executable.
+
+Example:
+
+    #!/bin/sh
+    CNT=$(cat "${TODO_PATH}" | grep -v "^x " | wc -l)
+    CNT_DONE=$(cat "${TODO_PATH}" | grep "^x " | wc -l)
+    echo "Task Count: ${CNT} active, ${CNT_DONE} completed"
+    exit 0
+
+$ todo counts
+Task Count: 5 active, 3 completed
