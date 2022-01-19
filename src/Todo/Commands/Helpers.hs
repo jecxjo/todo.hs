@@ -175,12 +175,13 @@ readIndex index = maybe (throwError $ EInvalidArg index) return (maybeRead (T.un
 -- | Queries the user, yes or no
 queryAction :: (AppConfig m, MonadIO m) => [Task] -> Text -> m Bool
 queryAction tasks str =
-  autoAccept <$> get >>=
-  maybe (queryAction' tasks str) return
+  (prettyPrinting <$> get) >>= \pretty ->
+      autoAccept <$> get >>=
+      maybe (queryAction' pretty tasks str) return
 
-queryAction' :: (MonadIO m) => [Task] -> Text -> m Bool
-queryAction' tasks str =
-    mapM_ (liftIO . print) tasks >>
+queryAction' :: (MonadIO m) => Bool -> [Task] -> Text -> m Bool
+queryAction' useColor tasks str =
+    mapM_ (liftIO . putStrLn . (if useColor then showColor else show)) tasks >>
     (liftIO . T.putStr $ str <> " (N/y)? ") >>
     liftIO (hFlush stdout) >>
     liftIO readChar >>= f
