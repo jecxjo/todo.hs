@@ -1,0 +1,7 @@
+List addon scripts
+
+    $ todo listaddons
+    jira-open
+    pretty-print-today
+    eom-reporting
+

@@ -8,6 +8,7 @@ Flags:
  -y         Auto accept for any questions (like pressing Y)
  -n         Auto deny for any questions (like pressing N)
  -p         Force prompt for all task modifying commands
+ -S path    Points to addon scripts directory
 
 Actions:
  add "Task I need to do +project @context"
@@ -34,6 +35,7 @@ Actions:
  repeat TASKNUM
  standup
  today
+ listaddons
  help COMMAND
  license
  changelog

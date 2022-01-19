@@ -1,0 +1,4 @@
+Addon Scripts
+-------------
+
+Addon support allows for adding commands without having to add them to the original code base.

@@ -19,6 +19,7 @@ import           Paths_todo (version)
 import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
 import           Text.Color
 import           Todo.App
+import           Todo.Addons
 import           Todo.Commands.Helpers
 import           Todo.HelpInfo
 import           Todo.Parser
@@ -67,8 +68,12 @@ process ("-n":rest) =
 process ("-p":rest) =
   modify (\st -> st { forcedPrompt = True }) >> process rest
 
+-- | Flag for defining addon directory
+process ("-S":path:rest) =
+  modify (\st -> st { addonPath = Just (T.unpack path) }) >> process rest
+
 -- | Debug output
-process ("debug":rest) = get >>= printShowable
+process ["debug"] = get >>= printShowable
 
 -- | List all entries, ignoring thresholds
 -- Command Line: all "string to match" +Project @Context
@@ -335,6 +340,9 @@ process ["today"] = do
         (Completed _ (Incomplete _ _ aKV), Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
         _ -> EQ -- Don't care at that point its all screwed up
 
+-- |List addons installed
+process ["listAddons"] = listAddons >>= flip forM_ (liftIO . T.putStrLn)
+
 -- |Help output
 -- Command Line: help
 process ["usage"] = liftIO $ T.putStrLn usage
@@ -384,5 +392,5 @@ process [idx] = do
   notEmpty (throwError $ EInvalidIndex idx') (printTuple pretty) $ filter ((== idx') . fst) pending
 
 -- | Fail over
-process _ = throwError . EMiscError $ T.pack "Invalid argument"
+process _ = throwError . EMiscError $ T.pack "Invalid argument (failover)"
 
