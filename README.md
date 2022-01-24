@@ -6,10 +6,16 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.4.0)
+## Supported Features (0.4.6)
 
 _Note:_ Major rewrite in version 0.4, switched to an mtl style, making the code
 much cleaner. No real functional changes.
+
+
+**Color Support**
+
+If your terminal supports colors then context, projects, and keywords are
+specially colored.
 
 **Add**
 
@@ -148,7 +154,17 @@ just deletes the entry.
     $ cat $HOME/report.txt
     2017-04-27T13:40:35 1 1
 
-**NEW: Regular Expression Searches**
+**Repeat**
+
+    $ todo all
+    1: Example Task
+    $ todo repeat 1
+    Task repeated
+    $ todo all
+    1: Example Task
+    2: x 2022-01-23 Example Task
+
+**Regular Expression Searches**
 
     $ todo
     1: Example Task
@@ -165,7 +181,7 @@ just deletes the entry.
 
 *Note:* Regular expressions are handled by PCRE so perl regex, not POSIX. 
 
-**NEW: Regular Epxression Swaps**
+**Regular Epxression Swaps**
 
     $ todo
     1: Pick mike up from airport
@@ -186,10 +202,32 @@ Or change due dates.
     $ todo swap 1 "due:.*" "due:tomorrow"
     Updated Task: Pick up milk due:2017-06-15
 
+**Today**
 
-## Future features
+    $ todo add "Something for today due:today at:2340"
+    ADDED: Something for today due:2022-01-24 at:2340
+    $ todo today
+    Today: 2022-01-24
+    -----------------
+    1: Something for today due:2022-01-24 at:2340
 
-- Colored output
+## Addons
+
+The project now supports addons. The todo.txt file is defined with the
+environment variable `TODO_PATH`.
+
+    #!/bin/sh
+    CNT=$(cat "${TODO_PATH}" | grep -v "^x " | wc -l)
+    CNT_DONE=$(cat "${TODO_PATH}" | grep "^x " | wc -l)
+    echo "Task Count: ${CNT} active, ${CNT_DONE} completed"
+    exit 0
+
+To get a list of addons use the `listAddon` command.
+
+    $ todo -S /home/user/.addons listAddons
+    counts
+    $ todo -S /home/user/.addons counts
+    Task Count: 5 active, 3 completed
 
 [1]: https://github.com/ginatrapani/todo.txt-cli/wiki/The-Todo.txt-Format
 [2]: https://commentedcode.org/blog/2016/07/30/haskell-project-stack-and-data-types
