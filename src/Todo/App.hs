@@ -15,7 +15,9 @@ module Todo.App (
     module Control.Monad.Except,
     module Control.Monad.Arguments,
     module Control.Monad.Date,
+    module Control.Monad.EnvVar,
     module Control.Monad.FileSystem,
+    module Control.Monad.Process,
     module Control.Monad.IO.Class
   ) where
 
@@ -23,7 +25,9 @@ import qualified Control.Exception as E
 import           Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import           Control.Monad.IO.Class
 import           Control.Monad.Arguments (MonadArguments(..))
+import           Control.Monad.EnvVar (MonadEnvVar(..))
 import           Control.Monad.FileSystem (MonadFileSystem(..))
+import           Control.Monad.Process (MonadProcess(..))
 import           Control.Monad.Date (MonadDate(..))
 import           Control.Monad.State (StateT, MonadState, runStateT, get, put, modify)
 import           Data.List (intercalate)
@@ -42,16 +46,17 @@ data Options = Options {
                        , autoAccept :: Maybe Bool
                        , forcedPrompt :: Bool
                        , prettyPrinting :: Bool
+                       , addonPath :: Maybe FilePath
                        }
                        deriving (Show, Eq)
 
 type AppConfig = MonadState Options
 
 emptyOptions :: Options
-emptyOptions = Options "" Nothing Nothing Nothing Nothing False False
+emptyOptions = Options "" Nothing Nothing Nothing Nothing False False Nothing
 
 initOptions :: FilePath -> Bool -> Options
-initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting
+initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting Nothing
 
 data ErrorType
   = EInvalidIndex Int
@@ -69,7 +74,8 @@ newtype AppM a = AppM {
   runAppM :: StateT Options (ExceptT ErrorType IO) a
 } deriving (Monad, Functor, Applicative,
             AppConfig, MonadIO, MonadError ErrorType,
-            MonadArguments, MonadFileSystem, MonadDate)
+            MonadArguments, MonadEnvVar, MonadFileSystem,
+            MonadProcess, MonadDate)
 
 runApp :: Options -> AppM () -> IO ()
 runApp o app = either (T.putStrLn . renderError) (return . fst) =<< runExceptT (runStateT (runAppM app) o)

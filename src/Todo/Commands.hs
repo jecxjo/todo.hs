@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module Todo.Commands where
@@ -7,7 +6,7 @@ module Todo.Commands where
 import qualified Control.Exception as E
 import           Control.Monad (forM_, liftM2, join)
 import           Data.Bool (bool)
-import           Data.Maybe (maybe)
+import           Data.Maybe (maybe, fromMaybe)
 import           Data.List (sort, nub, concatMap, sortBy)
 import           Data.Semigroup ((<>))
 import qualified Data.Text as T
@@ -19,6 +18,7 @@ import           Paths_todo (version)
 import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
 import           Text.Color
 import           Todo.App
+import           Todo.Addons
 import           Todo.Commands.Helpers
 import           Todo.HelpInfo
 import           Todo.Parser
@@ -26,13 +26,26 @@ import           Todo.Tasks
 import           Todo.RegEx (matchGen, swapGen, swapAllGen)
 import           Todo.Util
 
+-- | Grabs environment variabls and inserts them into app config
+loadEnvVars :: (AppConfig m, MonadEnvVar m) => m ()
+loadEnvVars = do
+    todoTxtM <- lookupEnv "TODO_PATH"
+    defaultTxt <- todoTxtPath <$> get
+    let todoTxt = maybe defaultTxt T.unpack todoTxtM
+    archiveTxtM <- lookupEnv "TODO_ARCHIVE_PATH"
+    let archiveTxt = T.unpack <$> archiveTxtM
+    addonTxtM <- lookupEnv "TODO_ADDON_PATH"
+    let addonTxt = T.unpack <$> addonTxtM
+    modify (\st -> st { todoTxtPath = todoTxt, archiveTxtPath = archiveTxt, addonPath = addonTxt })
+
 -- | Main entry to command processing
-parseArgs :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadDate m) => m ()
-parseArgs = getArgs >>= process
+parseArgs :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadProcess m, MonadDate m, MonadEnvVar m) => m ()
+parseArgs = loadEnvVars >>
+            getArgs >>= process
 
 -- | Given a list of command line arguments, this function performs the user
 -- triggered action
-process :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadDate m) => [Text] -> m ()
+process :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadProcess m, MonadDate m) => [Text] -> m ()
 
 -- | No args -> Print todo list
 --process [] = getPendingTodo >>= filterThreshold >>= (printTuple =<< (prettyPrinting <$> get))
@@ -66,6 +79,13 @@ process ("-n":rest) =
 -- | Flag for forcing prompts on all modifying queries
 process ("-p":rest) =
   modify (\st -> st { forcedPrompt = True }) >> process rest
+
+-- | Flag for defining addon directory
+process ("-S":path:rest) =
+  modify (\st -> st { addonPath = Just (T.unpack path) }) >> process rest
+
+-- | Debug output
+process ["debug"] = get >>= printShowable
 
 -- | List all entries, ignoring thresholds
 -- Command Line: all "string to match" +Project @Context
@@ -332,6 +352,9 @@ process ["today"] = do
         (Completed _ (Incomplete _ _ aKV), Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
         _ -> EQ -- Don't care at that point its all screwed up
 
+-- |List addons installed
+process ["listAddons"] = listAddons >>= flip forM_ (liftIO . T.putStrLn)
+
 -- |Help output
 -- Command Line: help
 process ["usage"] = liftIO $ T.putStrLn usage
@@ -373,13 +396,19 @@ process ("test":d:_) = do
   today <- convertToDate $ T.unpack d
   liftIO . putStrLn $ show today
 
--- | Passing just a number prints index
-process [idx] = do
+-- | Check addons, index or error out
+process (cmd:args) = do
   pretty <- prettyPrinting <$> get
-  idx' <- maybe (throwError $ EInvalidArg idx) return (maybeRead (T.unpack idx) :: Maybe Int)
-  pending <- getPendingTodo
-  notEmpty (throwError $ EInvalidIndex idx') (printTuple pretty) $ filter ((== idx') . fst) pending
-
--- | Fail over
-process _ = throwError . EMiscError $ T.pack "Invalid argument"
-
+  addonExists <- isAddon cmd
+  if addonExists
+     then do todoPath <- todoTxtPath <$> get
+             cwd <- addonPath <$> get
+             let cwdStr = fromMaybe "" cwd
+             let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
+             res <- runAddon (fromMaybe "" cwd) [("TODO_PATH", todoPath)] cmdStr (map T.unpack args)
+             if res
+                then liftIO $ T.putStrLn "done"
+                else throwError . EMiscError $ T.pack "Addon Failed"
+     else do idx <- maybe (throwError $ EInvalidArg cmd) return (maybeRead (T.unpack cmd) :: Maybe Int)
+             pending <- getPendingTodo
+             notEmpty (throwError $ EInvalidIndex idx) (printTuple pretty) $ filter ((== idx) . fst) pending

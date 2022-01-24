@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [0.4.6] - 2022-01-19
 ### Added
 - Support for colored output
+- Added debug command
+- Added scripting support
 
 ### Changed
 - Prompt's display of task supports color output

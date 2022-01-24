@@ -36,6 +36,7 @@ dependencies:
 - file-embed
 - bytestring
 - pretty-terminal
+- process
 
 library:
   source-dirs: src
