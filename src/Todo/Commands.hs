@@ -398,17 +398,21 @@ process ("test":d:_) = do
 
 -- | Check addons, index or error out
 process (cmd:args) = do
-  pretty <- prettyPrinting <$> get
-  addonExists <- isAddon cmd
-  if addonExists
-     then do todoPath <- todoTxtPath <$> get
-             cwd <- addonPath <$> get
-             let cwdStr = fromMaybe "" cwd
-             let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
-             res <- runAddon (fromMaybe "" cwd) [("TODO_PATH", todoPath)] cmdStr (map T.unpack args)
-             if res
-                then liftIO $ T.putStrLn "done"
-                else throwError . EMiscError $ T.pack "Addon Failed"
-     else do idx <- maybe (throwError $ EInvalidArg cmd) return (maybeRead (T.unpack cmd) :: Maybe Int)
-             pending <- getPendingTodo
-             notEmpty (throwError $ EInvalidIndex idx) (printTuple pretty) $ filter ((== idx) . fst) pending
+    cwd <- addonPath <$> get
+    case cwd of
+      Nothing -> tryIndex
+      Just cwdStr -> tryAddon cwdStr
+  where
+      tryIndex = do idx <- maybe (throwError $ EInvalidArg cmd) return (maybeRead (T.unpack cmd) :: Maybe Int)
+                    pending <- getPendingTodo
+                    pretty <- prettyPrinting <$> get
+                    notEmpty (throwError $ EInvalidIndex idx) (printTuple pretty) $ filter ((== idx) . fst) pending
+      tryAddon cwdStr = do addonExists <- isAddon cmd
+                           if addonExists
+                           then do todoPath <- todoTxtPath <$> get
+                                   let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
+                                   res <- runAddon cwdStr [("TODO_PATH", todoPath)] cmdStr (map T.unpack args)
+                                   if res
+                                   then liftIO $ T.putStrLn "done"
+                                   else throwError . EMiscError $ T.pack "Addon Failed"
+                           else tryIndex
