@@ -5,12 +5,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Added
+- Added scripting support
+
+### Changed
+- Updated README
 
 ## [0.4.6] - 2022-01-19
 ### Added
 - Support for colored output
 - Added debug command
-- Added scripting support
 
 ### Changed
 - Prompt's display of task supports color output
