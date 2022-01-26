@@ -304,7 +304,9 @@ process ["repeat", idx] = do
   liftIO $ putStrLn "Tasks Repeated"
 
 -- | Print stuff completed yesterday and stuff due for today
-process ["standup"] = do
+process ["standup"] = process ["standup", ""]
+
+process ["standup", priority] = do
     todo <- getPendingTodo
     completed <- liftM2 (++) getArchivedTodo getCompletedTodo
     now <- getDay
@@ -312,6 +314,11 @@ process ["standup"] = do
 
     let due = removeIndex $ filterTupleDueDate now todo
     let completedYesterday = removeIndex $ filterTupleCompleteDate yesterday completed
+    highPriority <- if T.length priority == 0
+                    then return Nothing
+                    else bool (throwError $ EInvalidArg "Priority must be a letter" )
+                              (return $ Just $ removeIndex $ filterTuplePriority (T.head $ T.toUpper priority) todo)
+                              (isPriority $ T.head $ T.toUpper priority)
 
     liftIO $ putStrLn "Standup"
     liftIO $ putStrLn "========================"
@@ -325,6 +332,13 @@ process ["standup"] = do
     liftIO $ putStrLn "------------------------"
     printList due
     liftIO $ putStrLn ""
+
+    case highPriority of
+      Just pri -> do liftIO $ putStrLn "Priority"
+                     liftIO $ putStrLn "------------------------"
+                     printList pri
+                     liftIO $ putStrLn ""
+      Nothing -> return ()
   where
     remove' (_, Completed _ task) = task
     remove' (_, task) = task
@@ -332,6 +346,8 @@ process ["standup"] = do
 
     printList :: (Show a, MonadIO m) => [a] -> m ()
     printList lst = forM_ lst (liftIO . print)
+
+    isPriority c = c >= 'A' && c <= 'Z'
 
 -- |Print tasks due today, ordered by "at:HHMM"
 process ["today"] = do
