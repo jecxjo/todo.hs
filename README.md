@@ -211,6 +211,42 @@ Or change due dates.
     -----------------
     1: Something for today due:2022-01-24 at:2340
 
+**Standup**
+
+    $ todo standup
+    Standup
+    ========================
+    Completed 2022-01-24
+    ------------------------
+    (A) 2022-01-21 Pay $50 Bill
+    2021-12-31 Activate Hulu account due:2022-01-01 t:2022-01-01
+    2022-01-24 Fix indexing when addon path not added +todohs +bug
+
+    Due 2022-01-25
+    ------------------------
+    2021-12-02 Call about rental due:2022-01-25
+
+An optional priority letter can be added to incorportate a minimum priort to
+include to lists, not just based on due date.
+
+    $ todo standup B
+    Standup
+    ========================
+    Completed 2022-01-24
+    ------------------------
+    (A) 2022-01-21 Pay $50 Bill
+    2021-12-31 Activate Hulu account due:2022-01-01 t:2022-01-01
+    2022-01-24 Fix indexing when addon path not added +todohs +bug
+
+    Due 2022-01-25
+    ------------------------
+    2021-12-02 Call about rental due:2022-01-25
+
+    Priority
+    ------------------------
+    (A) A really important task
+    (B) A less important task
+
 ## Addons
 
 The project now supports addons. The todo.txt file is defined with the

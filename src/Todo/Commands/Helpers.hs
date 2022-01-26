@@ -30,7 +30,8 @@ module Todo.Commands.Helpers (
     filterTupleDueDate,
     filterTupleCompleteDate,
     shortCircuit,
-    filterThreshold
+    filterThreshold,
+    filterTuplePriority
   ) where
 
 import qualified Control.Exception as E
@@ -252,3 +253,10 @@ filterThreshold lst = do
   return $ filter (\(i, t) -> case t of
                                 Completed _ _ -> True
                                 Incomplete _ _ str -> maybe True (<= now) (extractThreshold str)) lst
+
+filterTuplePriority :: Priority -> [(Int, Task)] -> [(Int, Task)]
+filterTuplePriority pri = filter priOrHigher
+  where
+    isHigherPriority (Incomplete (Just p) _ _) = p <= pri
+    isHigherPriority _ = False
+    priOrHigher (_, tsk) = isHigherPriority tsk
