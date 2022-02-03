@@ -224,7 +224,7 @@ Or change due dates.
 
     Due 2022-01-25
     ------------------------
-    2021-12-02 Call about rental due:2022-01-25
+    5: 2021-12-02 Call about rental due:2022-01-25
 
 An optional priority letter can be added to incorportate a minimum priort to
 include to lists, not just based on due date.
@@ -240,12 +240,12 @@ include to lists, not just based on due date.
 
     Due 2022-01-25
     ------------------------
-    2021-12-02 Call about rental due:2022-01-25
+    5: 2021-12-02 Call about rental due:2022-01-25
 
     Priority
     ------------------------
-    (A) A really important task
-    (B) A less important task
+    1: (A) A really important task
+    2: (B) A less important task
 
 ## Addons
 
