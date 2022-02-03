@@ -149,6 +149,7 @@ process ("add":rest) = do
 -- |Add completed task to list
 -- Command Line: addx Example Task that is done
 process ("addx":rest) = do
+  pretty <- prettyPrinting <$> get
   line <- either (throwError . EParseError) return $ validateLine . T.unpack $ T.unwords rest
   todo <- convertTaskStrings line
   allTasks <- getAllTodo
@@ -156,7 +157,7 @@ process ("addx":rest) = do
   let todo' = Completed now todo
   let newList = [(0, todo')] <> allTasks
   bool (shortCircuit "Nothing Completed") (writeTodo newList) =<< queryConfirm [todo] "Complete"
-  liftIO . putStrLn $ "COMPLETED: " ++ show todo'
+  liftIO . putStrLn $ if pretty then (color Red "COMPLETED: " ++ showColor todo') else ("COMPLETED:" ++ show todo')
 
 -- |Delete task
 -- Command Line: delete 1 3
@@ -307,17 +308,18 @@ process ["repeat", idx] = do
 process ["standup"] = process ["standup", ""]
 
 process ["standup", priority] = do
+    pretty <- prettyPrinting <$> get
     todo <- getPendingTodo
     completed <- liftM2 (++) getArchivedTodo getCompletedTodo
     now <- getDay
     let yesterday = addDays (-1) now
 
-    let due = removeIndex $ filterTupleDueDate now todo
+    let due = filterTupleDueDate now todo
     let completedYesterday = removeIndex $ filterTupleCompleteDate yesterday completed
     highPriority <- if T.length priority == 0
                     then return Nothing
                     else bool (throwError $ EInvalidArg "Priority must be a letter" )
-                              (return $ Just $ removeIndex $ filterTuplePriority (T.head $ T.toUpper priority) todo)
+                              (return $ Just $ filterTuplePriority (T.head $ T.toUpper priority) todo)
                               (isPriority $ T.head $ T.toUpper priority)
 
     liftIO $ putStrLn "Standup"
@@ -325,18 +327,18 @@ process ["standup", priority] = do
 
     liftIO $ putStrLn $ "Completed " ++ show yesterday
     liftIO $ putStrLn "------------------------"
-    printList completedYesterday
+    printList pretty completedYesterday
     liftIO $ putStrLn ""
 
     liftIO $ putStrLn $ "Due " ++ show now
     liftIO $ putStrLn "------------------------"
-    printList due
+    printTuple pretty due
     liftIO $ putStrLn ""
 
     case highPriority of
       Just pri -> do liftIO $ putStrLn "Priority"
                      liftIO $ putStrLn "------------------------"
-                     printList pri
+                     printTuple pretty pri
                      liftIO $ putStrLn ""
       Nothing -> return ()
   where
@@ -344,8 +346,8 @@ process ["standup", priority] = do
     remove' (_, task) = task
     removeIndex = map remove'
 
-    printList :: (Show a, MonadIO m) => [a] -> m ()
-    printList lst = forM_ lst (liftIO . print)
+    printList :: (Show a, ShowColor a, MonadIO m) => Bool -> [a] -> m ()
+    printList useColor lst = forM_ lst (liftIO . putStrLn . (if useColor then showColor else show))
 
     isPriority c = c >= 'A' && c <= 'Z'
 
