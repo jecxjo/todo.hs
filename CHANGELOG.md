@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Indexing fails when no addon directory set
+- Standup should honor thresholds
 
 ## [0.4.7] - 2022-01-23
 ### Added

@@ -309,7 +309,7 @@ process ["standup"] = process ["standup", ""]
 
 process ["standup", priority] = do
     pretty <- prettyPrinting <$> get
-    todo <- getPendingTodo
+    todo <- getPendingTodo >>= filterThreshold
     completed <- liftM2 (++) getArchivedTodo getCompletedTodo
     now <- getDay
     let yesterday = addDays (-1) now
