@@ -20,3 +20,12 @@ Example:
 
 $ todo counts
 Task Count: 5 active, 3 completed
+
+Available Envronment Variables
+==============================
+
+  TODO_ARCHIVE_PATH  - Path to Archive file (if set)
+  TODO_ADDON_PATH    - Path to Addon directory (if set)
+  TODO_EXEC          - Path to executable
+  TODO_PATH          - Path to todo.txt
+  PWD                - Directory you're running todo from

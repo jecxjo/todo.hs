@@ -445,8 +445,16 @@ process (cmd:args) = do
       tryAddon cwdStr = do addonExists <- isAddon cmd
                            if addonExists
                            then do todoPath <- todoTxtPath <$> get
+                                   todoExec <- getExecutable
+                                   archivePath <- archiveTxtPath <$> get
+                                   addonPath' <- addonPath <$> get
                                    let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
-                                   res <- runAddon cwdStr [("TODO_PATH", todoPath)] cmdStr (map T.unpack args)
+                                   let vars = [ ("TODO_EXEC", (T.unpack todoExec))
+                                              , ("TODO_PATH", todoPath)
+                                              ]
+                                              ++ (maybe [] (\x -> [("TODO_ARCHIVE_PATH", x)]) archivePath)
+                                              ++ (maybe [] (\x -> [("TODO_ADDON_PATH", x)]) addonPath')
+                                   res <- runAddon cwdStr vars cmdStr (map T.unpack args)
                                    if res
                                    then liftIO $ T.putStrLn "done"
                                    else throwError . EMiscError $ T.pack "Addon Failed"
