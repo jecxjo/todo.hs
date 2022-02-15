@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Added minimum priority optional argument to "standup" command
 - Added numbering to standup
+- Added "yesterday" command to mark completed tasks you forgot about
+- Scripts get access to called todo
 
 ### Fixed
 - Indexing fails when no addon directory set
+- Standup should honor thresholds
 
 ## [0.4.7] - 2022-01-23
 ### Added

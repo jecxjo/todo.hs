@@ -180,6 +180,23 @@ process ("complete":idx) = do
   let completed = map (\(i, t) -> (i, Completed now t)) match
   bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
 
+-- |Mark Task Complete yesterday
+-- Command Line: yesterday 1
+process ["yesterday", idx] = do
+  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
+  now <- getDay
+  let yesterday = addDays (-1) now
+  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
+  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
+  liftIO $ putStrLn "Task Completed"
+
+process ("yesterday":idx) = do
+  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
+  now <- getDay
+  let yesterday = addDays (-1) now
+  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
+  bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+
 -- |List only completed tasks
 -- Command Line: completed
 process ["completed"] = (prettyPrinting <$> get ) >>= \pretty -> getCompletedTodo >>= printTuple pretty
@@ -309,7 +326,7 @@ process ["standup"] = process ["standup", ""]
 
 process ["standup", priority] = do
     pretty <- prettyPrinting <$> get
-    todo <- getPendingTodo
+    todo <- getPendingTodo >>= filterThreshold
     completed <- liftM2 (++) getArchivedTodo getCompletedTodo
     now <- getDay
     let yesterday = addDays (-1) now
@@ -428,8 +445,16 @@ process (cmd:args) = do
       tryAddon cwdStr = do addonExists <- isAddon cmd
                            if addonExists
                            then do todoPath <- todoTxtPath <$> get
+                                   todoExec <- getExecutable
+                                   archivePath <- archiveTxtPath <$> get
+                                   addonPath' <- addonPath <$> get
                                    let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
-                                   res <- runAddon cwdStr [("TODO_PATH", todoPath)] cmdStr (map T.unpack args)
+                                   let vars = [ ("TODO_EXEC", (T.unpack todoExec))
+                                              , ("TODO_PATH", todoPath)
+                                              ]
+                                              ++ (maybe [] (\x -> [("TODO_ARCHIVE_PATH", x)]) archivePath)
+                                              ++ (maybe [] (\x -> [("TODO_ADDON_PATH", x)]) addonPath')
+                                   res <- runAddon cwdStr vars cmdStr (map T.unpack args)
                                    if res
                                    then liftIO $ T.putStrLn "done"
                                    else throwError . EMiscError $ T.pack "Addon Failed"
