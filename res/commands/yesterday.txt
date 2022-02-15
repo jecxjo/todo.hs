@@ -1,0 +1,18 @@
+Complete a task yesterday
+
+    $ date
+    Tue Feb 15 11:02:54 AM CST 2022
+    $ todo list
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    $ todo complete 2
+    Task Completed
+    $ todo list
+    1: Pick up milk @errands
+    $ cat todo.txt
+    Pick up milk @errands
+    x 2022-02-14 Pick up eggs @errands
+
+The complete/done command will change an incomplete task to completed.
+
+Related Commands: complete

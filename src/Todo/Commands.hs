@@ -180,6 +180,23 @@ process ("complete":idx) = do
   let completed = map (\(i, t) -> (i, Completed now t)) match
   bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
 
+-- |Mark Task Complete yesterday
+-- Command Line: yesterday 1
+process ["yesterday", idx] = do
+  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
+  now <- getDay
+  let yesterday = addDays (-1) now
+  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
+  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
+  liftIO $ putStrLn "Task Completed"
+
+process ("yesterday":idx) = do
+  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
+  now <- getDay
+  let yesterday = addDays (-1) now
+  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
+  bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+
 -- |List only completed tasks
 -- Command Line: completed
 process ["completed"] = (prettyPrinting <$> get ) >>= \pretty -> getCompletedTodo >>= printTuple pretty

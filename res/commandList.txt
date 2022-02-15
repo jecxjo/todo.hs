@@ -19,8 +19,9 @@ Actions:
  search|s "regular expression"
  searchall "regular expression"
  delete|del|remove|rm TASKNUM
- complete|done|do TASKNUM
+ complete|done|do [TASKNUM]
  completed
+ yesterday [TASKNUM]
  searchcompleted|sc "regular expression"
  priority|pri TASKNUM NEWPRIORITY
  version
