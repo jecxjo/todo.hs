@@ -86,6 +86,23 @@ The complete/done command will change an incomplete task to completed.
     x 2018-04-26 Pick up milk @errands
     x 2018-04-26 Pay Bills +LifeProblems
 
+**Yesterday**
+
+Ever forget to mark a task done and want to keep track of actual completion dates?
+
+    $ date
+    Tue Feb 15 11:02:54 AM CST 2022
+    $ todo list
+    1: Pick up milk @errands
+    2: Pick up eggs @errands
+    $ todo complete 2
+    Task Completed
+    $ todo list
+    1: Pick up milk @errands
+    $ cat todo.txt
+    Pick up milk @errands
+    x 2022-02-14 Pick up eggs @errands
+
 **Delete**
 
     $ todo
