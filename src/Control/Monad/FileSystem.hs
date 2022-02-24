@@ -15,7 +15,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Prelude hiding (readFile, writeFile, appendFile)
-import           System.Directory (doesFileExist, listDirectory)
+import           System.Directory (doesFileExist, listDirectory, getHomeDirectory)
 
 -- | A class of monads that can interact with the filesystem.
 class Monad m => MonadFileSystem m where
@@ -46,6 +46,12 @@ class Monad m => MonadFileSystem m where
   default listFiles :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m [Text]
   listFiles path = lift $ listFiles path
 
+  -- | List Home directory
+  getHomeDir ::  m Text
+
+  default getHomeDir :: (MonadTrans t, MonadFileSystem m', m ~ t m') => m Text
+  getHomeDir =  lift getHomeDir
+
 instance MonadFileSystem m => MonadFileSystem (ExceptT e m)
 instance MonadFileSystem m => MonadFileSystem (ReaderT r m)
 instance MonadFileSystem m => MonadFileSystem (StateT s m)
@@ -60,4 +66,5 @@ instance MonadFileSystem IO where
   writeFile path = T.writeFile (T.unpack path)
   appendFile path = T.appendFile (T.unpack path)
   listFiles path = fmap (map T.pack) $ listDirectory $ T.unpack path
+  getHomeDir = T.pack <$> getHomeDirectory
 

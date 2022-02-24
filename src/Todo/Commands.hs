@@ -4,7 +4,7 @@
 module Todo.Commands where
 
 import qualified Control.Exception as E
-import           Control.Monad (forM_, liftM2, join)
+import           Control.Monad (forM_, liftM2, join, void)
 import           Data.Bool (bool)
 import           Data.Maybe (maybe, fromMaybe)
 import           Data.List (sort, nub, concatMap, sortBy)
@@ -36,7 +36,9 @@ loadEnvVars = do
     let archiveTxt = T.unpack <$> archiveTxtM
     addonTxtM <- lookupEnv "TODO_ADDON_PATH"
     let addonTxt = T.unpack <$> addonTxtM
-    modify (\st -> st { todoTxtPath = todoTxt, archiveTxtPath = archiveTxt, addonPath = addonTxt })
+    editorM <- lookupEnv "EDITOR"
+    let editor = T.unpack <$> editorM
+    modify (\st -> st { todoTxtPath = todoTxt, archiveTxtPath = archiveTxt, addonPath = addonTxt, editor = editor })
 
 -- | Main entry to command processing
 parseArgs :: (AppConfig m, AppError m, MonadIO m, MonadArguments m, MonadFileSystem m, MonadProcess m, MonadDate m, MonadEnvVar m) => m ()
@@ -389,6 +391,15 @@ process ["today"] = do
 
 -- |List addons installed
 process ["listAddons"] = listAddons >>= flip forM_ (liftIO . T.putStrLn)
+
+-- |Launch $EDITOR to make bigger changes
+process ["edit"] = do
+    txtFile <- todoTxtPath <$> get
+    editor <- editor <$> get
+    home <- getHomeDir
+    case editor of
+      Nothing -> liftIO $ putStrLn "No $EDITOR set"
+      (Just e) -> void $ runProcess (T.unpack home) [] e [txtFile]
 
 -- |Help output
 -- Command Line: help

@@ -37,6 +37,7 @@ Actions:
  standup
  today
  listaddons
+ edit
  help COMMAND
  license
  changelog

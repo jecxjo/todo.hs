@@ -264,6 +264,10 @@ include to lists, not just based on due date.
     1: (A) A really important task
     2: (B) A less important task
 
+**Edit**
+
+Launches your `$EDITOR` to make more complex udpates.
+
 ## Addons
 
 The project now supports addons. The todo.txt file is defined with the
