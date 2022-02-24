@@ -47,16 +47,17 @@ data Options = Options {
                        , forcedPrompt :: Bool
                        , prettyPrinting :: Bool
                        , addonPath :: Maybe FilePath
+                       , editor :: Maybe FilePath
                        }
                        deriving (Show, Eq)
 
 type AppConfig = MonadState Options
 
 emptyOptions :: Options
-emptyOptions = Options "" Nothing Nothing Nothing Nothing False False Nothing
+emptyOptions = Options "" Nothing Nothing Nothing Nothing False False Nothing Nothing
 
 initOptions :: FilePath -> Bool -> Options
-initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting Nothing
+initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting Nothing Nothing
 
 data ErrorType
   = EInvalidIndex Int

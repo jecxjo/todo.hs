@@ -55,6 +55,7 @@ helpTopics "repeat" = fn "commands/repeat.txt"
 helpTopics "standup" = fn "commands/standup.txt"
 helpTopics "today" = fn "commands/today.txt"
 helpTopics "listaddons" = fn "commands/listaddons.txt"
+helpTopics "edit" = fn "commands/edit.txt"
 
 helpTopics "todo.txt" = fn "topics/todo.txt"
 helpTopics "duedate" = fn "topics/duedate.txt"
