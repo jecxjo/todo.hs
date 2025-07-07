@@ -18,9 +18,6 @@ module Todo.Util
 import           Control.Exception
 import           Data.Bool (bool)
 import           Data.Maybe (listToMaybe)
-import           Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
 import           System.Directory
 import           System.IO.Error
 import           System.IO (hSetBuffering, hGetBuffering, stdin, BufferMode(..))

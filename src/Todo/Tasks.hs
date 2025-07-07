@@ -21,20 +21,17 @@ module Todo.Tasks
   , extractAt
   ) where
 
-import           Control.Monad (liftM)
-import           Data.Bool (bool)
 import           Data.Char (toLower)
-import           Data.Time (toGregorian)
 import           Data.Time.Calendar (addDays, Day(..))
 import           Data.Time.Calendar.WeekDate (toWeekDate, fromWeekDate)
-import           Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid, midday, midnight)
+import           Data.Time.LocalTime (TimeOfDay(..), midday, midnight)
 import           Data.Traversable (forM)
 import qualified Data.Text as T
 import           Data.Text (Text)
-import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
+import           System.Console.Pretty (Color (..), bgColor, color)
 import           Text.Color (ShowColor(..))
-import           Todo.Util (subsetOf, showPaddedNumber)
-import           Todo.App (MonadDate, AppConfig, AppError, getDay, throwError, ErrorType(..))
+import           Todo.Util (showPaddedNumber)
+import           Todo.App (MonadDate, AppError, getDay, throwError, ErrorType(..))
 
 -- |Priority: (A)
 type Priority = Char
@@ -55,13 +52,13 @@ data KeyValue = KVDueDate Day
 instance Show KeyValue where
   show (KVDueDate date) = "due:" ++ show date
   show (KVThreshold date) = "t:" ++ show date
-  show (KVAt (TimeOfDay hr min _)) = "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 min
+  show (KVAt (TimeOfDay hr mn _)) = "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 mn
   show (KVString key value) = key ++ ":" ++ value
 
 instance ShowColor KeyValue where
   showColor (KVDueDate date) = bgColor Red $ "due:" ++ show date
   showColor (KVThreshold date) = bgColor Yellow $ color Blue $ "t:" ++ show date
-  showColor (KVAt (TimeOfDay hr min _)) = bgColor Blue $ "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 min
+  showColor (KVAt (TimeOfDay hr mn _)) = bgColor Blue $ "at:" ++ showPaddedNumber '0' 2 hr ++ showPaddedNumber '0' 2 mn
   showColor (KVString key value) = key ++ ":" ++ value
 
 
@@ -91,19 +88,22 @@ unrollColorStringTypes :: [StringTypes] -> String
 unrollColorStringTypes = unwords . map showColor
 
 getProjects :: [StringTypes] -> [Project]
-getProjects = map (\(SProject p) -> p) . filter fn
-  where fn (SProject _) = True
-        fn _ = False
+getProjects = foldr extractProjects []
+  where
+    extractProjects (SProject p) acc = p : acc
+    extractProjects _ acc = acc
 
 getContexts :: [StringTypes] -> [Context]
-getContexts = map (\(SContext c) -> c) . filter fn
-  where fn (SContext _) = True
-        fn _ = False
+getContexts = foldr extractContexts []
+  where
+    extractContexts (SContext c) acc = c : acc
+    extractContexts _ acc = acc
 
 getKeyValues :: [StringTypes] -> [KeyValue]
-getKeyValues = map (\(SKeyValue kv) -> kv) . filter fn
-  where fn (SKeyValue _) = True
-        fn _ = False
+getKeyValues = foldr extractKeyValues []
+  where
+    extractKeyValues (SKeyValue kv) acc = kv : acc
+    extractKeyValues _ acc = acc
 
 extractDueDate :: [StringTypes] -> Maybe Day
 extractDueDate [] = Nothing

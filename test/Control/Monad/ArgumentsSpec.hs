@@ -1,33 +1,44 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 module Control.Monad.ArgumentsSpec where
 
 import           Control.Monad.Arguments
-import           Control.Monad.TestFixture
-import           Control.Monad.TestFixture.TH
+import           Control.Monad.Reader (Reader, runReader, asks)
+import           Data.Text (Text)
 import           Test.Hspec (Spec, describe, it, shouldBe)
 
-mkFixture "Fixture" [ts| MonadArguments |]
+-- Data type to store mock arguments
+data MockArguments = MockArguments
+  { mockArgs       :: [Text]
+  , mockArg0       :: Text
+  , mockExecutable :: Text
+  }
+
+-- MonadArguments instance using Reader monad
+instance {-# OVERLAPPING #-} MonadArguments (Reader MockArguments) where
+  getArgs = asks mockArgs
+  getArg0 = asks mockArg0
+  getExecutable = asks mockExecutable
 
 spec :: Spec
 spec =
   describe "MonadArguments" $ do
     describe "getArgs" $ do
-      it "can return an empty list of arguments" $ do
-        let fixture = def { _getArgs = return [] }
-        let result = unTestFixture (getArgs) fixture
-        result `shouldBe` []
-
-      it "can return a list of arguments" $ do
-        let fixture = def { _getArgs = return ["Arg1", "Arg2", "Arg3"] }
-        let result = unTestFixture (getArgs) fixture
+      it "returns a list of arguments" $ do
+        let mockData = MockArguments ["Arg1", "Arg2", "Arg3"] "mockArg0" "/mock/path/to/executable"
+        let result = runReader getArgs mockData
         result `shouldBe` ["Arg1", "Arg2", "Arg3"]
 
+    describe "getArg0" $ do
+      it "returns the first argument" $ do
+        let mockData = MockArguments ["Arg1", "Arg2", "Arg3"] "mockArg0" "/mock/path/to/executable"
+        let result = runReader getArg0 mockData
+        result `shouldBe` "mockArg0"
+
+    describe "getExecutable" $ do
+      it "returns the executable path" $ do
+        let mockData = MockArguments ["Arg1", "Arg2", "Arg3"] "mockArg0" "/mock/path/to/executable"
+        let result = runReader getExecutable mockData
+        result `shouldBe` "/mock/path/to/executable"

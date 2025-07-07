@@ -1,91 +1,109 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE GADTs #-}
+
 module Control.Monad.FileSystemSpec where
 
 import           Control.Monad.FileSystem
 
-import           Control.Monad.TestFixture
-import           Control.Monad.TestFixture.TH
+import qualified Control.Exception as E
+import           Control.Monad.State (State, get, put, runState)
 import           Data.List (find, sortOn)
-import           Data.Maybe (maybe)
-import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Prelude hiding (readFile, writeFile, appendFile)
 import           Test.Hspec (Spec, describe, it, shouldBe)
+import           System.IO.Error (mkIOError, userErrorType)
 
--- | Test type for verifying MonadFileSystem
-data FileT = FileT { fileName :: Text, fileData :: Text }
-  deriving (Show, Eq)
+-- File representation
+data FileT = FileT
+  { fileName :: Text
+  , fileData :: Text
+  } deriving (Eq, Show)
 
-mkFixture "Fixture" [ts| MonadFileSystem |]
+mockIOException :: E.IOException
+mockIOException = mkIOError userErrorType "Mock IO Exception" Nothing Nothing
+
+-- MonadFileSystem instance using State monad
+instance {-# OVERLAPPING #-} MonadFileSystem (State [FileT]) where
+  readFileSafe path = do
+    files <- get
+    case find (\f -> fileName f == path) files of
+      Just file -> return $ Right (fileData file)
+      Nothing -> return $ Left $ mockIOException
+
+  writeFileSafe path text = do
+    files <- get
+    let otherFiles = filter (\f -> fileName f /= path) files
+    let newFile = FileT path text
+    let newFiles = (newFile : otherFiles)
+    put newFiles
+    return $ Right ()
+
+  appendFileSafe path text = do
+    files <- get
+    let oldText = maybe T.empty fileData (find (\f -> fileName f == path) files)
+    let otherFiles = filter (\f -> fileName f /= path) files
+    let newFiles = sortOn fileName $ FileT path (oldText <> text) : otherFiles
+    put newFiles
+    return $ Right ()
+
+  listFilesSafe _ = do
+    files <- get
+    return $ Right $ map fileName files
 
 spec :: Spec
 spec =
   describe "MonadFileSystem" $ do
-    let filesystem = [FileT { fileName = "todo.txt", fileData = "Unit Test @todo app" },
-                      FileT { fileName = "done.txt", fileData = T.empty }
-                     ]
-    let fixture = def { _readFile = \path -> do
-                                        files <- get
-                                        maybe (return "") (return . fileData) (find (\f -> path == fileName f) files)
-                      , _writeFile = \path text -> do
-                                        files <- get
-                                        let otherFiles = filter (\f -> path /= fileName f) files
-                                        let newFiles = sortOn fileName $ [FileT { fileName = path, fileData = text }] <> otherFiles
-                                        put newFiles
-                      , _appendFile = \path text -> do
-                                        files <- get
-                                        let oldText = maybe T.empty fileData (find (\f -> path == fileName f) files)
-                                        let otherFiles = filter (\f -> path /= fileName f) files
-                                        let newFiles = sortOn fileName $ [FileT { fileName = path, fileData = oldText <> text }] <> otherFiles
-                                        put newFiles
-                      }
 
-    describe "readFile" $ do
-      it "returns an empty string when no file exists" $ do
-        let (file, _, _) = runTestFixture (readFile "test.txt") fixture filesystem
-        file `shouldBe` T.empty
-
+    describe "readFileSafe" $ do
       it "returns contents when a file exists" $ do
-        let (file, _, _) = runTestFixture (readFile "todo.txt") fixture filesystem
-        file `shouldBe` (fileData $ (!!) filesystem 0)
+        let initialFilesystem = [FileT "todo.txt" "Unit Test @todo app", FileT "done.txt" T.empty]
+        let (result, _) = runState (readFileSafe "todo.txt" :: State [FileT] (Either E.IOException Text)) initialFilesystem
+        result `shouldBe` Right "Unit Test @todo app"
 
-    describe "writeFile" $ do
+      it "returns an error when a file does not exist" $ do
+        let initialFilesystem = [FileT "todo.txt" "Unit Test @todo app", FileT "done.txt" T.empty]
+        let (result, _) = runState (readFileSafe "test.txt" :: State [FileT] (Either E.IOException Text)) initialFilesystem
+        result `shouldBe` Left mockIOException
+
+    describe "writeFileSafe" $ do
       it "creates a file when one doesn't exist" $ do
-        let newFile = FileT { fileName = "test.txt",  fileData = "This is a test" }
-        let (_, filesystem', _) = runTestFixture (writeFile (fileName newFile) (fileData newFile)) fixture filesystem
-        let expected = sortOn fileName $ [newFile] <> filesystem
-        filesystem' `shouldBe` expected
-        length filesystem' `shouldBe` 3
+        let initialFilesystem = []
+        let (result, finalState) = runState (writeFileSafe "foo.txt" "This is a test" :: State [FileT] (Either E.IOException ())) initialFilesystem
+        result `shouldBe` Right ()
+        length finalState `shouldBe` 1
+        finalState `shouldBe` [FileT "foo.txt" "This is a test"]
 
       it "replaces a file when one exists" $ do
-        let newFile = FileT { fileName = "todo.txt",  fileData = "This is a test" }
-        let (_, filesystem', _) = runTestFixture (writeFile (fileName newFile) (fileData newFile)) fixture filesystem
-        let expected = sortOn fileName $ [newFile] <> (filter (\f -> "todo.txt" /= fileName f) filesystem)
-        filesystem' `shouldBe` expected
-        length filesystem' `shouldBe` 2
+        let initialFilesystem = [FileT "todo.txt" "Unit Test @todo app"]
+        let (result, finalState) = runState (writeFileSafe "todo.txt" "This is a test" :: State [FileT] (Either E.IOException ())) initialFilesystem
+        result `shouldBe` Right ()
+        length finalState `shouldBe` 1
+        finalState `shouldBe` [FileT "todo.txt" "This is a test"]
 
-    describe "appendFile" $ do
+    describe "appendFileSafe" $ do
       it "creates a file when one doesn't exist" $ do
-        let newFile = FileT { fileName = "test.txt",  fileData = "This is a test" }
-        let (_, filesystem', _) = runTestFixture (appendFile (fileName newFile) (fileData newFile)) fixture filesystem
-        let expected = sortOn fileName $ [newFile] <> filesystem
-        filesystem' `shouldBe` expected
-        length filesystem' `shouldBe` 3
+        let initialFilesystem = []
+        let (result, finalState) = runState (appendFileSafe "foo.txt" "This is a test" :: State [FileT] (Either E.IOException ())) initialFilesystem
+        result `shouldBe` Right ()
+        length finalState `shouldBe` 1
+        finalState `shouldBe` [FileT "foo.txt" "This is a test"]
 
-      it "replaces a file when one exists" $ do
-        let newFile = FileT { fileName = "todo.txt",  fileData = "\nThis is a test" }
-        let (_, filesystem', _) = runTestFixture (appendFile (fileName newFile) (fileData newFile)) fixture filesystem
-        let expectedFile = FileT { fileName = "todo.txt", fileData = "Unit Test @todo app\nThis is a test" }
-        let expected = sortOn fileName $ [expectedFile] <> (filter (\f -> "todo.txt" /= fileName f) filesystem)
-        filesystem' `shouldBe` expected
-        length filesystem' `shouldBe` 2
+      it "appends a file when it does exist" $ do
+        let initialFilesystem = [FileT "todo.txt" "Unit Test @todo app"]
+        let (result, finalState) = runState (appendFileSafe "todo.txt" "This is a test" :: State [FileT] (Either E.IOException ())) initialFilesystem
+        result `shouldBe` Right ()
+        length finalState `shouldBe` 1
+        finalState `shouldBe` [FileT "todo.txt" "Unit Test @todo appThis is a test"]
+
+    describe "listFilesSafe" $ do
+      it "shows no files when there are no files" $ do
+        let initialFilesystem = []
+        let (result, _) = runState (listFilesSafe "" :: State [FileT] (Either E.IOException [Text])) initialFilesystem
+        result `shouldBe` Right []
+
+      it "shows files when there are files" $ do
+        let initialFilesystem = [FileT "todo.txt" "Unit Test @todo app", FileT "done.txt" T.empty]
+        let (result, _) = runState (listFilesSafe "" :: State [FileT] (Either E.IOException [Text])) initialFilesystem
+        result `shouldBe` Right ["todo.txt", "done.txt"]

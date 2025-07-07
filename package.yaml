@@ -1,10 +1,10 @@
 name:                todo
 version:             0.4.8.0
 github:              "jecxjo/todo.hs"
-license:             BSD3
+license:             BSD-3-Clause
 author:              "Jeff Parent"
 maintainer:          "jeff@commentedcode.org"
-copyright:           "Copyright 2016 Jeff Parent"
+copyright:           "2016-2025 Jeff Parent"
 
 extra-source-files:
 - README.md
@@ -12,13 +12,13 @@ extra-source-files:
 - LICENSE
 
 # Metadata used when publishing your package
-synopsis:            A todo.txt cli implementation in haskell
+synopsis:            A todo.txt clie implemented in Haskell
 category:            Productivity
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on Github at <https://github.com/jecxjo/todo.hs#readme>
+description:         Please see the README on GitHub at <https://github.com/jecxjo/todo.hs#readme>
 
 dependencies:
 - base >= 4.7 && < 5
@@ -40,12 +40,27 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
+
 
 executables:
   todo:
     main:                Main.hs
     source-dirs:         app
-    ghc-options:         -Wall
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - todo
 
@@ -53,7 +68,11 @@ tests:
   todo-test:
     main:                Spec.hs
     source-dirs:         test
-    ghc-options:         -Wall
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
     dependencies:
     - todo
     - hspec
@@ -63,4 +82,3 @@ tests:
     - directory
     - filepath
     - regex-pcre-builtin
-    - test-fixture

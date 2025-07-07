@@ -1,50 +1,50 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Control.Monad.FileSystem (
     MonadFileSystem(..)
   ) where
 
+import qualified Control.Exception as E
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.Reader (ReaderT)
 import           Control.Monad.State (StateT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Writer (WriterT)
-import           Data.Bool (bool)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Prelude hiding (readFile, writeFile, appendFile)
-import           System.Directory (doesFileExist, listDirectory)
+import           System.Directory (listDirectory)
 
 -- | A class of monads that can interact with the filesystem.
 class Monad m => MonadFileSystem m where
   -- | Reads a file at the given path and returns it contents. If an error
   -- occurs, the method returns an error.
-  readFile :: Text -> m Text
+  readFileSafe ::  Text -> m (Either E.IOException Text)
 
-  default readFile :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m Text
-  readFile = lift . readFile
+  default readFileSafe :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m (Either E.IOException Text)
+  readFileSafe = lift . readFileSafe
 
   -- | Writes a file at the given path. If an error occurs, the method returns
   -- an error.
-  writeFile :: Text -> Text -> m ()
+  writeFileSafe :: (E.Exception e) => Text -> Text -> m (Either e ())
 
-  default writeFile :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> Text -> m ()
-  writeFile path str = lift $ writeFile path str
+  default writeFileSafe :: (MonadTrans t, MonadFileSystem m', m ~ t m', E.Exception e) => Text -> Text -> m (Either e ())
+  writeFileSafe path str = lift $ writeFileSafe path str
 
   -- | Append a file at the given path. If an error occurs, the method returns
   -- an error.
-  appendFile :: Text -> Text -> m ()
+  appendFileSafe :: (E.Exception e) => Text -> Text -> m (Either e ())
 
-  default appendFile :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> Text -> m ()
-  appendFile path str = lift $ appendFile path str
+  default appendFileSafe :: (MonadTrans t, MonadFileSystem m', m ~ t m', E.Exception e) => Text -> Text -> m (Either e ())
+  appendFileSafe path str = lift $ appendFileSafe path str
 
   -- | Lists files in a given path. If an error occurs, the method returns an error.
-  listFiles :: Text -> m [Text]
+  listFilesSafe :: (E.Exception e) => Text -> m (Either e [Text])
 
-  default listFiles :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m [Text]
-  listFiles path = lift $ listFiles path
+  default listFilesSafe :: (MonadTrans t, MonadFileSystem m', m ~ t m', E.Exception e) => Text -> m (Either e [Text])
+  listFilesSafe path = lift $ listFilesSafe path
 
 instance MonadFileSystem m => MonadFileSystem (ExceptT e m)
 instance MonadFileSystem m => MonadFileSystem (ReaderT r m)
@@ -52,12 +52,25 @@ instance MonadFileSystem m => MonadFileSystem (StateT s m)
 instance (MonadFileSystem m, Monoid w) => MonadFileSystem (WriterT w m)
 
 instance MonadFileSystem IO where
-  -- | The IO version of readFile creates a new file if one doesn't exist and
+  -- | The IO version of readFileSafe creates a new file if one doesn't exist and
   -- returns an empty string.
-  readFile path = doesFileExist (T.unpack path)
-                >>= bool (T.writeFile (T.unpack path) T.empty >> return T.empty)
-                         (T.readFile $ T.unpack path)
-  writeFile path = T.writeFile (T.unpack path)
-  appendFile path = T.appendFile (T.unpack path)
-  listFiles path = fmap (map T.pack) $ listDirectory $ T.unpack path
-
+  readFileSafe path = do
+    result <- E.try $ T.readFile (T.unpack path)
+    return $ case result of
+        Left err -> Left err
+        Right content -> Right content
+  writeFileSafe path content = do
+    result <- E.try $ T.writeFile (T.unpack path) content
+    return $ case result of
+        Left err -> Left err
+        Right _ -> Right ()
+  appendFileSafe path content = do
+    result <- E.try $ T.appendFile (T.unpack path) content
+    return $ case result of
+        Left err -> Left err
+        Right _ -> Right ()
+  listFilesSafe path = do
+    result <- E.try $ listDirectory (T.unpack path)
+    return $ case result of
+        Left err -> Left err
+        Right files -> Right $ map T.pack files

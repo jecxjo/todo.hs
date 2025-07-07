@@ -1,5 +1,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Control.Monad.Process (
     MonadProcess(..)
@@ -10,8 +11,6 @@ import           Control.Monad.Reader (ReaderT)
 import           Control.Monad.State (StateT)
 import           Control.Monad.Writer (WriterT)
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Data.Text (Text)
-import qualified Data.Text as T
 import           System.Exit (ExitCode(..))
 import qualified System.Process as P
 

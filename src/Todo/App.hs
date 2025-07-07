@@ -30,8 +30,6 @@ import           Control.Monad.FileSystem (MonadFileSystem(..))
 import           Control.Monad.Process (MonadProcess(..))
 import           Control.Monad.Date (MonadDate(..))
 import           Control.Monad.State (StateT, MonadState, runStateT, get, put, modify)
-import           Data.List (intercalate)
-import           Data.Semigroup ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Text (Text)
@@ -56,7 +54,7 @@ emptyOptions :: Options
 emptyOptions = Options "" Nothing Nothing Nothing Nothing False False Nothing
 
 initOptions :: FilePath -> Bool -> Options
-initOptions path prettyPrinting = Options path Nothing Nothing Nothing Nothing False prettyPrinting Nothing
+initOptions path pp = Options path Nothing Nothing Nothing Nothing False pp Nothing
 
 data ErrorType
   = EInvalidIndex Int
