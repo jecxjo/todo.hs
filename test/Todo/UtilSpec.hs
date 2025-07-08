@@ -14,7 +14,7 @@ spec =
       it "Matches two emtpy lists" $ do
         (([] :: [Int]) `subsetOf` ([] :: [Int])) `shouldBe` True
 
-      it "Matches empty list to filled list" $do
+      it "Matches empty list to filled list" $ do
         (([] :: [Int]) `subsetOf` ([1,2,3] :: [Int])) `shouldBe` True
 
       it "Matches single item list" $ do

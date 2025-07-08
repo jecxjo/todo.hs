@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Fixed
+- Upgraded the stack version to the latest LTS
+- Some cleanup of the code to have more strict compile rules
+- Some cleanup of the unit tests to remove `test-fixture`
 
 ## [0.4.8] - 2022-02-16
 ### Added

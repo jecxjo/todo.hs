@@ -9,9 +9,7 @@ module Todo.HelpInfo (
   ) where
 
 import           App.Resources
-import           Todo.Commands.Helpers
 import           Data.Maybe (fromMaybe)
-import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import qualified Data.Text as T
 

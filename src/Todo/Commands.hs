@@ -1,21 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+module Todo.Commands (
+  parseArgs
+) where
 
-module Todo.Commands where
-
-import qualified Control.Exception as E
 import           Control.Monad (forM_, liftM2, join)
 import           Data.Bool (bool)
-import           Data.Maybe (maybe, fromMaybe)
-import           Data.List (sort, nub, concatMap, sortBy)
-import           Data.Semigroup ((<>))
+import           Data.List (sort, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Text (Text)
 import           Data.Time.Calendar (addDays)
 import           Data.Version (showVersion)
 import           Paths_todo (version)
-import           System.Console.Pretty (Color (..), Style (..), bgColor, color, style)
+import           System.Console.Pretty (Color (..), color)
 import           Text.Color
 import           Todo.App
 import           Todo.Addons
@@ -23,7 +21,7 @@ import           Todo.Commands.Helpers
 import           Todo.HelpInfo
 import           Todo.Parser
 import           Todo.Tasks
-import           Todo.RegEx (matchGen, swapGen, swapAllGen)
+import           Todo.RegEx (matchGen, swapGen)
 import           Todo.Util
 
 -- | Grabs environment variabls and inserts them into app config
@@ -250,9 +248,9 @@ process ["swap", idx, oldText, newText] = do
 
 -- |Modifies the priority of a previously existing task
 -- Command Line: priorty 1 B
-process ["priority", idx, priority] = do
+process ["priority", idx, prio] = do
     (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
-    char <- bool (throwError $ EInvalidArg "Priority must be a letter")  (return $ T.head $ T.toUpper priority) $ T.length priority == 1
+    char <- bool (throwError $ EInvalidArg "Priority must be a letter")  (return $ T.head $ T.toUpper prio) $ T.length prio == 1
     changed <- applyPri char match
     let numbered = zipWith (\i t -> (i, t)) [1..] changed
     bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> numbered)) =<< queryConfirm changed "Modify"
@@ -260,10 +258,13 @@ process ["priority", idx, priority] = do
   where
     applyPri char = mapM (doPri char . snd)
     doPri char (Incomplete _ mDay stx) = either (throwError . EParseError) convertTaskStrings $ validateLine $ show (Incomplete (Just char) mDay stx)
+    doPri _ (Completed _ _) = throwError $ EMiscError "Cannot modify priority of a completed task"
 
 process ["priority", idx] = do
   (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
-  let changed = map (\(i, Incomplete _ mDay stx) -> (i, Incomplete Nothing mDay stx)) match
+  changed <- mapM (\(i, t) -> case t of
+                                Incomplete _ mDay stx -> return (i, Incomplete Nothing mDay stx)
+                                Completed _ _ -> throwError $ EMiscError "Cannot modify priority of a completed task") match
   bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> changed)) =<< queryConfirm (map snd changed) "Modify"
   printPrefixedTuple "Task Modified" changed
 
@@ -305,18 +306,23 @@ process ["projects"] = do
   let projects = nub . sort $ map (\(p,_,_) -> p) splitTodo
   forM_ projects (printProjects pretty splitTodo)
   where
-    splitTodoFn (i, t) = map (\p -> (p, i, t)) (filter (\x -> head x == '+') (words $ replace '.' '-' $ show t))
-    printProjects pretty tasks project = do
-      liftIO $ putStrLn $ "==== " ++ project ++ " ===="
-      printTuple pretty $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == project) tasks
+    splitTodoFn (i, t) =
+      map (\p -> (p, i, t)) (filter (\x -> case x of
+                                             (c:_) -> c == '+'
+                                             [] -> False) (words $ replace '.' '-' $ show t))
+    printProjects pretty tsks proj = do
+      liftIO $ putStrLn $ "==== " ++ proj ++ " ===="
+      printTuple pretty $ map (\(_,i,t) -> (i,t)) $ filter (\(p,_,_) -> p == proj) tsks
       liftIO $ putStrLn ""
 
 -- | Repeat a task by creating a new task and completing the original
 process ["repeat", idx] = do
   (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   now <- getDay
-  let completed = map (\(i,t) -> (i, Completed now t)) match
-  let new = map (\(i, Incomplete pri date str) -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) date) str)) match
+  let completed = map (\(i, t) -> (i, Completed now t)) match
+  let new = map (\(i, t) -> case t of
+                              Incomplete pri dte str -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) dte) str)
+                              Completed _ _ -> (i, t)) match
   let newList = new <> nonMatch <> completed
   bool (shortCircuit "Nothing changed") (replacePending newList) =<< queryConfirm (map snd new) "Repeat"
   liftIO $ putStrLn "Tasks Repeated"
@@ -324,7 +330,7 @@ process ["repeat", idx] = do
 -- | Print stuff completed yesterday and stuff due for today
 process ["standup"] = process ["standup", ""]
 
-process ["standup", priority] = do
+process ["standup", prio] = do
     pretty <- prettyPrinting <$> get
     todo <- getPendingTodo >>= filterThreshold
     completed <- liftM2 (++) getArchivedTodo getCompletedTodo
@@ -333,11 +339,11 @@ process ["standup", priority] = do
 
     let due = filterTupleDueDate now todo
     let completedYesterday = removeIndex $ filterTupleCompleteDate yesterday completed
-    highPriority <- if T.length priority == 0
+    highPriority <- if T.length prio == 0
                     then return Nothing
                     else bool (throwError $ EInvalidArg "Priority must be a letter" )
-                              (return $ Just $ filterTuplePriority (T.head $ T.toUpper priority) todo)
-                              (isPriority $ T.head $ T.toUpper priority)
+                              (return $ Just $ filterTuplePriority (T.head $ T.toUpper prio) todo)
+                              (isPriority $ T.head $ T.toUpper prio)
 
     liftIO $ putStrLn "Standup"
     liftIO $ putStrLn "========================"
@@ -359,11 +365,11 @@ process ["standup", priority] = do
                      liftIO $ putStrLn ""
       Nothing -> return ()
   where
-    remove' (_, Completed _ task) = task
-    remove' (_, task) = task
+    remove' (_, Completed _ tsk) = tsk
+    remove' (_, tsk) = tsk
     removeIndex = map remove'
 
-    printList :: (Show a, ShowColor a, MonadIO m) => Bool -> [a] -> m ()
+    printList :: (ShowColor a, MonadIO m) => Bool -> [a] -> m ()
     printList useColor lst = forM_ lst (liftIO . putStrLn . (if useColor then showColor else show))
 
     isPriority c = c >= 'A' && c <= 'Z'

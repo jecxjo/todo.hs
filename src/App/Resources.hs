@@ -7,10 +7,8 @@ module App.Resources (
     getLicense
   ) where
 
-import           Control.Applicative ((<$>))
 import qualified Data.ByteString as BS
 import           Data.FileEmbed
-import           Data.List (lookup)
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 

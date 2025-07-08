@@ -19,13 +19,10 @@ module Todo.Parser
     ) where
 
 import Control.Applicative (many)
-import Control.Monad (liftM)
 import Data.Char (toUpper)
-import Data.List (concat)
-import Data.Maybe (isJust, fromJust)
 import Data.Text (pack)
 import Data.Time.Calendar (fromGregorianValid, Day(..))
-import Data.Time.LocalTime (TimeOfDay(..), makeTimeOfDayValid)
+import Data.Time.LocalTime (makeTimeOfDayValid)
 import Text.Parsec.Char ( char
                         , oneOf
                         , letter
@@ -141,9 +138,9 @@ kvat :: Parser Tasks.StringTypes
 kvat = try $ do
     _ <- string "at:"
     hr <- twoDigit
-    min <- twoDigit
+    mn <- twoDigit
     _ <- whiteSpace
-    let tod = makeTimeOfDayValid hr min 0
+    let tod = makeTimeOfDayValid hr mn 0
     maybe (fail "Not a valid time")
       (return . Tasks.SKeyValue . Tasks.KVAt)
       tod

@@ -10,7 +10,7 @@ module Todo.Commands.Helpers (
     printShowable,
     printTuple,
     printPrefixedTuple,
-    readFileSafe,
+    readFileMErr,
     getPendingTodo,
     getCompletedTodo,
     getArchivedTodo,
@@ -34,15 +34,13 @@ module Todo.Commands.Helpers (
     filterTuplePriority
   ) where
 
-import qualified Control.Exception as E
 import           Control.Monad (forM_, mplus)
-import           Data.List (sort, isInfixOf, intercalate, sortBy)
-import           Data.Maybe (maybe, fromJust)
-import           Data.Semigroup ((<>))
+import           Data.List (sort, sortBy)
+import           Data.Maybe (fromJust)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Text (Text)
-import           Data.Time.Calendar (Day(..), diffDays)
+import           Data.Time.Calendar (Day(..))
 import           Data.Time.Clock(UTCTime(..))
 import           Data.Time.Format (formatTime, defaultTimeLocale)
 import           Prelude hiding (readFile, writeFile)
@@ -77,7 +75,7 @@ printShowable :: (Show a, MonadIO m) => a -> m ()
 printShowable op = liftIO . putStrLn $ show op
 
 -- |Print a numbered array
-printTuple :: (Show a, ShowColor a, MonadIO m) => Bool -> [(Int, a)] -> m ()
+printTuple :: (ShowColor a, MonadIO m) => Bool -> [(Int, a)] -> m ()
 printTuple useColor lst = forM_ lst print'
   where width = fromIntegral $ digitCount $ maximum $ map fst lst
         print' (n, t) = liftIO . putStrLn $ showPaddedNumber ' ' width n ++ ": " ++ (if useColor then showColor t else show t)
@@ -88,82 +86,88 @@ printPrefixedTuple msg lst = forM_ lst print'
   where print' (_, t) = liftIO . putStrLn $ T.unpack msg <> ": " <> show t
 
 -- | Reads a file and throws an error in the AppError context
-readFileSafe :: (AppError m, MonadFileSystem m, MonadIO m) => Text -> m Text
-readFileSafe path =
-  either (throwError . EIOError) return =<< liftIO (E.try $ readFile path)
+readFileMErr :: (AppError m, MonadFileSystem m) => Text -> m Text
+readFileMErr path = do
+    result <- readFileSafe path
+    case result of
+      Left ioErr -> throwError $ EIOError ioErr
+      Right content -> return content
 
 -- | Write a file and throws an error in the AppError context
-writeFileSafe :: (AppError m, MonadFileSystem m, MonadIO m) => Text -> Text -> m ()
-writeFileSafe path txt =
-  either (throwError. EIOError) return =<< liftIO (E.try $ writeFile path txt)
+writeFileMErr :: (AppError m, MonadFileSystem m) => Text -> Text -> m ()
+writeFileMErr path txt = do
+  result <- writeFileSafe path txt
+  case result of
+    Left ioErr -> throwError $ EIOError ioErr
+    Right () -> return ()
 
 -- | Append a file and thrws an error in the AppError context
-appendFileSafe :: (AppError m, MonadFileSystem m, MonadIO m) => Text -> Text -> m ()
-appendFileSafe path txt =
-  readFileSafe path >>=
+appendFileMErr :: (AppError m, MonadFileSystem m) => Text -> Text -> m ()
+appendFileMErr path txt =
+  readFileMErr path >>=
   (\oldTxt -> return . T.intercalate "\n" $ T.lines oldTxt <> T.lines txt)
-  >>= writeFileSafe path
+  >>= writeFileMErr path
 
 -- | Read only pending tasks from todo.txt, sorted and numbered.
-getPendingTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [(Int, Task)]
+getPendingTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getPendingTodo = do
   path <- T.pack . todoTxtPath <$> get
-  tasks <- readFileSafe path >>=
+  tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
-  let pending = sort $ filter isIncomplete tasks
+  let pending = sort $ filter isIncomplete tsks
   return $ zip [1..] pending
 
 -- | Read only completed tasks from todo.txt, sorted and numbered.
-getCompletedTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [(Int, Task)]
+getCompletedTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getCompletedTodo = do
   path <- T.pack . todoTxtPath <$> get
-  tasks <- readFileSafe path >>=
+  tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
-  let completed = sort $ filter isCompleted tasks
+  let completed = sort $ filter isCompleted tsks
   return $ zip [1..] completed
 
 -- | Read all tasks from todo.txt, sorted and numbered.
-getAllTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [(Int, Task)]
+getAllTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getAllTodo = do
   path <- T.pack . todoTxtPath <$> get
-  tasks <- readFileSafe path >>=
+  tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
-  let all = sort tasks
-  return $ zip [1..] all
+  let allTasks = sort tsks
+  return $ zip [1..] allTasks
 
 -- | Read all tasks from archive file, sorted and numbered.
-getArchivedTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => m [(Int, Task)]
+getArchivedTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getArchivedTodo = do
   archivePath <- archiveTxtPath <$> get
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
-  tasks <- readFileSafe (T.pack path) >>=
+  tsks <- readFileMErr (T.pack path) >>=
               either (throwError . EParseError) return . parseLines path . T.unpack
-  let sorted = sort tasks
+  let sorted = sort tsks
   return $ zip [1..] sorted
 
 -- | Writes list of todo, overriding old file
-writeTodo :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => [(Int, Task)] -> m ()
+writeTodo :: (AppError m, AppConfig m, MonadFileSystem m) => [(Int, Task)] -> m ()
 writeTodo numberedTasks = do
   path <- T.pack . todoTxtPath <$> get
-  writeFileSafe path (T.intercalate "\n" . map (T.pack . show . snd) $ sortBy (\(_,t1) (_,t2) -> compare t1 t2) numberedTasks)
+  writeFileMErr path (T.intercalate "\n" . map (T.pack . show . snd) $ sortBy (\(_,t1) (_,t2) -> compare t1 t2) numberedTasks)
 
 -- | Writes list of todo to archive, appending old file
-writeArchive :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => [(Int, Task)] -> m ()
+writeArchive :: (AppError m, AppConfig m, MonadFileSystem m) => [(Int, Task)] -> m ()
 writeArchive numberedTasks = do
   archivePath <- archiveTxtPath <$> get
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
-  appendFileSafe (T.pack path) (T.intercalate "\n" . map (T.pack . show . snd) $ sortBy (\(_,t1) (_,t2) -> compare t1 t2) numberedTasks)
+  appendFileMErr (T.pack path) (T.intercalate "\n" . map (T.pack . show . snd) $ sortBy (\(_,t1) (_,t2) -> compare t1 t2) numberedTasks)
 
--- writeReport :: (AppError m, AppConfig m, MonadDate m, MonadFileSystem m, MonadIO m) => Int -> Int -> m ()
+writeReport :: (AppError m, AppConfig m, MonadDate m, MonadFileSystem m, MonadIO m) => Int -> Int -> m ()
 writeReport pending archived = do
   reportPath <- reportTxtPath <$> get
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus reportPath (Just $ replaceFileName todoPath defaultReportName)
   liftIO $ putStrLn $ "Writing to " ++ show path
   now <- getUTCTime
-  appendFileSafe (T.pack path) $ T.pack $ iso8601 now ++ " " ++ show pending ++ " " ++ show archived
+  appendFileMErr (T.pack path) $ T.pack $ iso8601 now ++ " " ++ show pending ++ " " ++ show archived
 
 -- | Converts all string types of task
 convertTaskStrings :: (AppConfig m, AppError m, MonadDate m) => Task -> m Task
@@ -173,6 +177,13 @@ convertTaskStrings (Incomplete pri now sx) = do
   let stamp = timeStamp st
   let time = stamp `mplus` now
   return $ Incomplete pri time sx'
+convertTaskStrings (Completed d (Incomplete pri now sx)) = do
+  sx' <- convertStringTypes sx
+  st <- get
+  let stamp = timeStamp st
+  let time = stamp `mplus` now
+  return $ Completed d (Incomplete pri time sx')
+convertTaskStrings _ = throwError $ EMiscError "Invalid task type for conversion"
 
 -- | Read index or throw an error
 readIndex :: (AppError m) => Text -> m Int
@@ -180,14 +191,14 @@ readIndex index = maybe (throwError $ EInvalidArg index) return (maybeRead (T.un
 
 -- | Queries the user, yes or no
 queryAction :: (AppConfig m, MonadIO m) => [Task] -> Text -> m Bool
-queryAction tasks str =
+queryAction tsks str =
   (prettyPrinting <$> get) >>= \pretty ->
       autoAccept <$> get >>=
-      maybe (queryAction' pretty tasks str) return
+      maybe (queryAction' pretty tsks str) return
 
 queryAction' :: (MonadIO m) => Bool -> [Task] -> Text -> m Bool
-queryAction' useColor tasks str =
-    mapM_ (liftIO . putStrLn . (if useColor then showColor else show)) tasks >>
+queryAction' useColor tsks str =
+    mapM_ (liftIO . putStrLn . (if useColor then showColor else show)) tsks >>
     (liftIO . T.putStr $ str <> " (N/y)? ") >>
     liftIO (hFlush stdout) >>
     liftIO readChar >>= f
@@ -198,31 +209,31 @@ queryAction' useColor tasks str =
 
 -- | Query the user, yes or no, based on args
 queryConfirm :: (AppConfig m, MonadIO m) => [Task] -> Text -> m Bool
-queryConfirm tasks str = do
+queryConfirm tsks str = do
   force <- forcedPrompt <$> get
   if force
-  then queryAction tasks str -- Query the task
+  then queryAction tsks str -- Query the task
   else return True -- Do the task
 
 getIndexTasks :: (AppError m) => Int -> [(Int, Task)] -> m [(Int, Task)]
-getIndexTasks index tasks = maybe (throwError $ EInvalidIndex index) return $ maybeFilter ((== index) . fst) tasks
+getIndexTasks index tsks = maybe (throwError $ EInvalidIndex index) return $ maybeFilter ((== index) . fst) tsks
 
 getNotIndexTasks :: (AppError m) => Int -> [(Int, Task)] -> m [(Int, Task)]
-getNotIndexTasks index tasks = maybe (throwError $ EInvalidIndex index) return $ maybeFilter ((/= index) . fst) tasks
+getNotIndexTasks index tsks = maybe (throwError $ EInvalidIndex index) return $ maybeFilter ((/= index) . fst) tsks
 
 splitIndexTasks :: (AppError m) => [Int] -> [(Int, Task)] -> m ([(Int, Task)], [(Int, Task)])
-splitIndexTasks indexes tasks = do
-  let matches = filter ((`elem` indexes) . fst) tasks
-  let nonMatches = filter ((`notElem` indexes) . fst) tasks
+splitIndexTasks indexes tsks = do
+  let matches = filter ((`elem` indexes) . fst) tsks
+  let nonMatches = filter ((`notElem` indexes) . fst) tsks
   if length matches == length indexes
   then return (matches, nonMatches)
   else throwError $ EInvalidIndexes $ filter (`notElem` map fst matches) indexes
 
-replacePending :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => [(Int, Task)] -> m ()
+replacePending :: (AppError m, AppConfig m, MonadFileSystem m) => [(Int, Task)] -> m ()
 replacePending newPending =
   writeTodo =<< (newPending <>) <$> getCompletedTodo
 
-replaceCompleted :: (AppError m, AppConfig m, MonadFileSystem m, MonadIO m) => [(Int, Task)] -> m()
+replaceCompleted :: (AppError m, AppConfig m, MonadFileSystem m) => [(Int, Task)] -> m()
 replaceCompleted newComplete =
   writeTodo =<< (newComplete <>) <$> getPendingTodo
 
@@ -247,10 +258,10 @@ iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
 shortCircuit :: (AppError m) => Text -> m ()
 shortCircuit = throwError . EShortCircuit
 
-filterThreshold :: (MonadDate m, MonadIO m) => [(Int, Task)] -> m [(Int, Task)]
+filterThreshold :: (MonadDate m) => [(Int, Task)] -> m [(Int, Task)]
 filterThreshold lst = do
   now <- getDay
-  return $ filter (\(i, t) -> case t of
+  return $ filter (\(_, t) -> case t of
                                 Completed _ _ -> True
                                 Incomplete _ _ str -> maybe True (<= now) (extractThreshold str)) lst
 
