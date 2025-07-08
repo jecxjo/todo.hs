@@ -6,7 +6,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.5.0)
+## Supported Features (0.4.9)
 
 _Note:_ Major rewrite in version 0.4, switched to an mtl style, making the code
 much cleaner. No real functional changes.
