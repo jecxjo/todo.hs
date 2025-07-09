@@ -37,6 +37,7 @@ dependencies:
 - bytestring
 - pretty-terminal
 - process
+- terminal-size
 
 library:
   source-dirs: src
