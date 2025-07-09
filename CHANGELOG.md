@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - New `burndown` command that is terminal aware
 
+### Fixed
+- Fixed `burndown` command to include the archive file
+
 ## [0.4.9] - 2025-07-08
 ### Fixed
 - Upgraded the stack version to the latest LTS

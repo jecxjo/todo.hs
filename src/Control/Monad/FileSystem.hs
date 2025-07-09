@@ -1,6 +1,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Control.Monad.FileSystem (
     MonadFileSystem(..)
@@ -46,6 +47,12 @@ class Monad m => MonadFileSystem m where
   default listFilesSafe :: (MonadTrans t, MonadFileSystem m', m ~ t m', E.Exception e) => Text -> m (Either e [Text])
   listFilesSafe path = lift $ listFilesSafe path
 
+  -- | Check if a file exists
+  fileExists :: Text -> m Bool
+
+  default fileExists :: (MonadTrans t, MonadFileSystem m', m ~ t m') => Text -> m Bool
+  fileExists path = lift $ fileExists path
+
 instance MonadFileSystem m => MonadFileSystem (ExceptT e m)
 instance MonadFileSystem m => MonadFileSystem (ReaderT r m)
 instance MonadFileSystem m => MonadFileSystem (StateT s m)
@@ -74,3 +81,8 @@ instance MonadFileSystem IO where
     return $ case result of
         Left err -> Left err
         Right files -> Right $ map T.pack files
+  fileExists path = do
+    result <- E.try @E.IOException $ T.readFile (T.unpack path)
+    return $ case result of
+        Left _ -> False
+        Right _ -> True
