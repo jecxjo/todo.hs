@@ -17,12 +17,14 @@ import           System.Console.Pretty (Color (..), color)
 import           Text.Color
 import           Todo.App
 import           Todo.Addons
+import           Todo.Commands.Burndown
 import           Todo.Commands.Helpers
 import           Todo.HelpInfo
 import           Todo.Parser
 import           Todo.Tasks
 import           Todo.RegEx (matchGen, swapGen)
 import           Todo.Util
+import           System.Console.Terminal.Size (size, Window(..))
 
 -- | Grabs environment variabls and inserts them into app config
 loadEnvVars :: (AppConfig m, MonadEnvVar m) => m ()
@@ -374,6 +376,28 @@ process ["standup", prio] = do
 
     isPriority c = c >= 'A' && c <= 'Z'
 
+-- | Burndown List
+process ["burndown"] = do
+    win <- liftIO $ size
+    let norm = case win of
+                    Nothing -> 38 :: Int
+                    Just (Window _ w) -> (if w < 12 then 38 else w - 12) :: Int
+    let days = case win of
+                    Nothing -> (-30)
+                    Just (Window h _) -> if h < 4 then (-30) else (-1 * (h - 4))
+    now <- getDay
+    let start = addDays (toInteger days) now
+    todoLst <- getAllTodo
+    let todo = map (\(_, t) -> t) todoLst
+    let activeTasks = calculateActiveTasksNormalized norm todo start now
+    -- Print the list of counts and days
+    liftIO $ putStrLn "Burndown Report"
+    liftIO $ putStrLn "========================"
+    forM_ activeTasks $ \(day, count) -> do
+        let dayStr = show day
+        let countStr = replicate count '#'
+        liftIO $ putStrLn $ dayStr ++ ": " ++ countStr
+
 -- |Print tasks due today, ordered by "at:HHMM"
 process ["today"] = do
     pretty <- prettyPrinting <$> get
@@ -414,6 +438,15 @@ process ["license"] = liftIO $ T.putStrLn license
 -- Command Line: changelog
 process ["changelog"] = liftIO $ T.putStrLn changelog
 
+process ["test"] = do
+    win <- liftIO $ size
+    case win of
+      Nothing -> liftIO $ putStrLn "Terminal size not available"
+      Just (Window h w) -> do
+        liftIO $ putStrLn $ "Width: " ++ show w ++ ", Height: " ++ show h
+        let widthTestText = replicate (w - 2) '-'
+        liftIO $ putStrLn $ ">" ++ widthTestText ++ "<"
+
 -- | Aliases
 process ("remove":rest) = process ("delete":rest)
 process ("del":rest) = process ("delete":rest)
@@ -432,10 +465,6 @@ process ("app":rest) = process("append":rest)
 process ("pre":rest) = process("prepend":rest)
 process ("rep":rest) = process("replace":rest)
 
--- | Test Call
-process ("test":d:_) = do
-  today <- convertToDate $ T.unpack d
-  liftIO . putStrLn $ show today
 
 -- | Check addons, index or error out
 process (cmd:args) = do

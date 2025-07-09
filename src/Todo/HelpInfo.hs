@@ -52,6 +52,7 @@ helpTopics "swap" = fn "commands/swap.txt"
 helpTopics "repeat" = fn "commands/repeat.txt"
 helpTopics "standup" = fn "commands/standup.txt"
 helpTopics "today" = fn "commands/today.txt"
+helpTopics "burndown" = fn "commands/burndown.txt"
 helpTopics "listaddons" = fn "commands/listaddons.txt"
 
 helpTopics "todo.txt" = fn "topics/todo.txt"

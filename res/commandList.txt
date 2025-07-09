@@ -36,6 +36,7 @@ Actions:
  repeat TASKNUM
  standup
  today
+ burndown
  listaddons
  help COMMAND
  license
