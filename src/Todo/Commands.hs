@@ -388,7 +388,8 @@ process ["burndown"] = do
     now <- getDay
     let start = addDays (toInteger days) now
     todoLst <- getAllTodo
-    let todo = map (\(_, t) -> t) todoLst
+    archLst <- hasArchivedTodo >>= \exists -> if exists then getArchivedTodo else return []
+    let todo = (map (\(_, t) -> t) todoLst) ++ (map (\(_, t) -> t) archLst)
     let activeTasks = calculateActiveTasksNormalized norm todo start now
     -- Print the list of counts and days
     liftIO $ putStrLn "Burndown Report"

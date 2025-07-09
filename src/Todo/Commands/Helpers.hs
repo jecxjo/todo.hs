@@ -15,6 +15,7 @@ module Todo.Commands.Helpers (
     getCompletedTodo,
     getArchivedTodo,
     getAllTodo,
+    hasArchivedTodo,
     writeTodo,
     writeArchive,
     writeReport,
@@ -145,6 +146,15 @@ getArchivedTodo = do
               either (throwError . EParseError) return . parseLines path . T.unpack
   let sorted = sort tsks
   return $ zip [1..] sorted
+
+-- | Check if Archive file exists
+hasArchivedTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m Bool
+hasArchivedTodo = do
+    archivePath <- archiveTxtPath <$> get
+    todoPath <- todoTxtPath <$> get
+    let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
+    exists <- fileExists (T.pack path)
+    return exists
 
 -- | Writes list of todo, overriding old file
 writeTodo :: (AppError m, AppConfig m, MonadFileSystem m) => [(Int, Task)] -> m ()
