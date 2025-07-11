@@ -1,0 +1,37 @@
+name: Release Deployment
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    release:
+      types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Haskell
+      - uses: haskell-actions/setup@v2.8.0
+        with:
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Run Unit Tests
+        run: stack test --fast
+
+      - name: Build Project
+        run: |
+          mkdir -p dist
+          stack install --local-bin-path dist
+
+      - name: Create Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: dist/todo
