@@ -241,7 +241,7 @@ completedTask = do
 task :: Parser Tasks.Task
 task = do
   _ <- try (many (char '\n'))
-  choice [ completedTask, completedTaskBad, incompleteTask ]
+  choice [ completedTaskBad, completedTask, incompleteTask ]
 
 tasks :: Parser [Tasks.Task]
 tasks = option [] . try $ many task

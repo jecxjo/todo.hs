@@ -29,3 +29,5 @@ Available Envronment Variables
   TODO_EXEC          - Path to executable
   TODO_PATH          - Path to todo.txt
   PWD                - Directory you're running todo from
+  TODO_INDEX         - A list of all the task ids in the todo.txt file
+  TODO_ITEM_x        - The text of the task with id x

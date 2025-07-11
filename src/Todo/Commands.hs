@@ -438,6 +438,7 @@ process ["today"] = do
 
 -- |List addons installed
 process ["listAddons"] = listAddons >>= flip forM_ (liftIO . T.putStrLn)
+process ["listaddons"] = listAddons >>= flip forM_ (liftIO . T.putStrLn)
 
 -- |Help output
 -- Command Line: help
@@ -502,12 +503,17 @@ process (cmd:args) = do
                                    todoExec <- getExecutable
                                    archivePath <- archiveTxtPath <$> get
                                    addonPath' <- addonPath <$> get
+                                   todoItems <- getAllTodo
+                                   todoIndexes <- getAllTodo >>= mapM (return . fst)
                                    let cmdStr = cwdStr ++ "/" ++ (T.unpack cmd)
                                    let vars = [ ("TODO_EXEC", (T.unpack todoExec))
                                               , ("TODO_PATH", todoPath)
+                                              , ("TODO_INDEX", T.unpack $ T.intercalate "," $ map T.pack $ map show todoIndexes)
                                               ]
                                               ++ (maybe [] (\x -> [("TODO_ARCHIVE_PATH", x)]) archivePath)
                                               ++ (maybe [] (\x -> [("TODO_ADDON_PATH", x)]) addonPath')
+                                              ++ (map (\(i, t) -> ("TODO_ITEM_" ++ show i, show t)) todoItems)
+
                                    res <- runAddon cwdStr vars cmdStr (map T.unpack args)
                                    if res
                                    then liftIO $ T.putStrLn "done"
