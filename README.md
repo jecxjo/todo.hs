@@ -6,7 +6,7 @@ A haskell implementation of todo.txt
 This application was created as a series of blog posts to cover some of the
 concepts of Haskell. To go through the development process go [here][2]
 
-## Supported Features (0.4.9)
+## Supported Features (0.5.0)
 
 _Note:_ Major rewrite in version 0.4, switched to an mtl style, making the code
 much cleaner. No real functional changes.
@@ -263,6 +263,27 @@ include to lists, not just based on due date.
     ------------------------
     1: (A) A really important task
     2: (B) A less important task
+    
+**Burndown**
+
+Displays a burndown chart of the tasks in your todo.txt and archive files.
+
+    $ todo burndown
+    Burndown Report
+    ========================
+    2025-06-16: ######
+    2025-06-17: ##########
+    2025-06-18: ################
+    2025-06-19: ############
+    2025-06-20: #######
+    2025-06-21: #####
+    2025-06-22: ######
+    2025-06-23: ###########
+    2025-06-24: ###########
+    2025-06-25: ############
+    2025-06-26: ###########
+    2025-06-27: ###########
+
 
 ## Addons
 
