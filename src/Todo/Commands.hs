@@ -154,7 +154,10 @@ process ("addx":rest) = do
   todo <- convertTaskStrings line
   allTasks <- getAllTodo
   now <- getDay
-  let todo' = Completed now todo
+  let (pri, start, sx) = case todo of
+        Incomplete p s x -> (p, s, x)
+        Completed p _ s x -> (p, s, x)
+  let todo' = Completed pri (maybe Nothing (\_ -> (Just now)) start) start sx
   let newList = [(0, todo')] <> allTasks
   bool (shortCircuit "Nothing Completed") (writeTodo newList) =<< queryConfirm [todo] "Complete"
   liftIO . putStrLn $ if pretty then (color Red "COMPLETED: " ++ showColor todo') else ("COMPLETED:" ++ show todo')
@@ -168,34 +171,46 @@ process("delete":idx) = do
 -- |Mark Task Complete
 -- Command Line: complete 1
 process ["complete", idx] = do
-  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
-  now <- getDay
-  let completed = map (\(i, t) -> (i, Completed now t)) match
-  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
-  liftIO $ putStrLn "Task Completed"
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
+    now <- getDay
+    let completed = map (\(i, t) -> (i, cvtCompleted now t)) match
+    bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
+    liftIO $ putStrLn "Task Completed"
+  where
+    cvtCompleted end (Incomplete pri start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
+    cvtCompleted end (Completed pri _ start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
 
 process ("complete":idx) = do
-  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
-  now <- getDay
-  let completed = map (\(i, t) -> (i, Completed now t)) match
-  bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+    (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
+    now <- getDay
+    let completed = map (\(i, t) -> (i, cvtCompleted now t)) match
+    bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+  where
+    cvtCompleted end (Incomplete pri start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
+    cvtCompleted end (Completed pri _ start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
 
 -- |Mark Task Complete yesterday
 -- Command Line: yesterday 1
 process ["yesterday", idx] = do
-  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
-  now <- getDay
-  let yesterday = addDays (-1) now
-  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
-  bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
-  liftIO $ putStrLn "Task Completed"
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
+    now <- getDay
+    let yesterday = addDays (-1) now
+    let completed = map (\(i, t) -> (i, cvtCompleted yesterday t)) match
+    bool (shortCircuit "Nothing to Complete") (replacePending (nonMatch <> completed)) =<< queryConfirm (map snd match) "Complete"
+    liftIO $ putStrLn "Task Completed"
+  where
+    cvtCompleted end (Incomplete pri start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
+    cvtCompleted end (Completed pri _ start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
 
 process ("yesterday":idx) = do
-  (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
-  now <- getDay
-  let yesterday = addDays (-1) now
-  let completed = map (\(i, t) -> (i, Completed yesterday t)) match
-  bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+    (match, nonMatch) <- join (splitIndexTasks <$> mapM readIndex idx <*> getPendingTodo)
+    now <- getDay
+    let yesterday = addDays (-1) now
+    let completed = map (\(i, t) -> (i, cvtCompleted yesterday t)) match
+    bool (throwError $ EMiscError "No tasks were completed") (replacePending (nonMatch <> completed) *> liftIO (putStrLn "Task Completed")) =<< queryAction (map snd match) "Complete"
+  where
+    cvtCompleted end (Incomplete pri start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
+    cvtCompleted end (Completed pri _ start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
 
 -- |List only completed tasks
 -- Command Line: completed
@@ -260,13 +275,13 @@ process ["priority", idx, prio] = do
   where
     applyPri char = mapM (doPri char . snd)
     doPri char (Incomplete _ mDay stx) = either (throwError . EParseError) convertTaskStrings $ validateLine $ show (Incomplete (Just char) mDay stx)
-    doPri _ (Completed _ _) = throwError $ EMiscError "Cannot modify priority of a completed task"
+    doPri _ Completed{} = throwError $ EMiscError "Cannot modify priority of a completed task"
 
 process ["priority", idx] = do
   (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
   changed <- mapM (\(i, t) -> case t of
                                 Incomplete _ mDay stx -> return (i, Incomplete Nothing mDay stx)
-                                Completed _ _ -> throwError $ EMiscError "Cannot modify priority of a completed task") match
+                                Completed{} -> throwError $ EMiscError "Cannot modify priority of a completed task") match
   bool (shortCircuit "Nothing to modify") (replacePending (nonMatch <> changed)) =<< queryConfirm (map snd changed) "Modify"
   printPrefixedTuple "Task Modified" changed
 
@@ -319,15 +334,18 @@ process ["projects"] = do
 
 -- | Repeat a task by creating a new task and completing the original
 process ["repeat", idx] = do
-  (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
-  now <- getDay
-  let completed = map (\(i, t) -> (i, Completed now t)) match
-  let new = map (\(i, t) -> case t of
-                              Incomplete pri dte str -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) dte) str)
-                              Completed _ _ -> (i, t)) match
-  let newList = new <> nonMatch <> completed
-  bool (shortCircuit "Nothing changed") (replacePending newList) =<< queryConfirm (map snd new) "Repeat"
-  liftIO $ putStrLn "Tasks Repeated"
+    (match, nonMatch) <- join (splitIndexTasks <$> ((\x -> return [x]) =<< readIndex idx) <*> getPendingTodo)
+    now <- getDay
+    let completed = map (\(i, t) -> (i, cvtCompleted now t)) match
+    let new = map (\(i, t) -> case t of
+                                Incomplete pri dte str -> (i, Incomplete pri (maybe Nothing (\_ -> Just now) dte) str)
+                                Completed{} -> (i, t)) match
+    let newList = new <> nonMatch <> completed
+    bool (shortCircuit "Nothing changed") (replacePending newList) =<< queryConfirm (map snd new) "Repeat"
+    liftIO $ putStrLn "Tasks Repeated"
+  where
+    cvtCompleted end (Incomplete pri start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
+    cvtCompleted end (Completed pri _ start sx) = Completed pri (maybe Nothing (\_ -> Just end) start) start sx
 
 -- | Print stuff completed yesterday and stuff due for today
 process ["standup"] = process ["standup", ""]
@@ -367,7 +385,7 @@ process ["standup", prio] = do
                      liftIO $ putStrLn ""
       Nothing -> return ()
   where
-    remove' (_, Completed _ tsk) = tsk
+    remove' (_, Completed pri _ start sx) = Incomplete pri start sx
     remove' (_, tsk) = tsk
     removeIndex = map remove'
 
@@ -412,10 +430,10 @@ process ["today"] = do
   where
     byAt (_, a) (_, b) =
       case (a, b) of
-        (Incomplete _ _ aKV, Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
-        (Completed _ (Incomplete _ _ aKV), Incomplete _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
+        (Incomplete _ _ aKV, Completed _ _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
+        (Completed _  _ _ aKV, Incomplete _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
         (Incomplete _ _ aKV, Incomplete _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
-        (Completed _ (Incomplete _ _ aKV), Completed _ (Incomplete _ _ bKV)) -> compare (extractAt aKV) (extractAt bKV)
+        (Completed _ _ _ aKV, Completed _ _ _ bKV) -> compare (extractAt aKV) (extractAt bKV)
         _ -> EQ -- Don't care at that point its all screwed up
 
 -- |List addons installed

@@ -52,6 +52,12 @@ instance {-# OVERLAPPING #-} MonadFileSystem (State [FileT]) where
     files <- get
     return $ Right $ map fileName files
 
+  fileExists path = do
+    files <- get
+    case find (\f -> fileName f == path) files of
+      Just _  -> return True
+      Nothing -> return False
+
 spec :: Spec
 spec =
   describe "MonadFileSystem" $ do

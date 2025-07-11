@@ -20,7 +20,7 @@ countActiveTasks day tasks =
 -- | Check if a task is active on a specific day
 isActiveOn :: Day -> Task -> Bool
 isActiveOn day (Incomplete _ (Just start) _) = start <= day 
-isActiveOn day (Completed end (Incomplete _ (Just start) _)) = start <= day && end >= day
+isActiveOn day (Completed _ end start _) = start <= (Just day) && end >= (Just day)
 isActiveOn _ _ = False
 
 

@@ -35,7 +35,7 @@ spec =
                                    (fromGregorian 2023 1 7, 2)]
 
             it "Counts completed tasks correctly" $ do
-                let tasks = [ Completed (fromGregorian 2023 1 7) (Incomplete Nothing (Just $ fromGregorian 2023 1 5) [])
+                let tasks = [ Completed Nothing (Just $ fromGregorian 2023 1 7) (Just $ fromGregorian 2023 1 5) []
                             , Incomplete Nothing (Just $ fromGregorian 2023 1 6) []
                             ]
                 let result = calculateActiveTasks tasks (fromGregorian 2023 1 4) (fromGregorian 2023 1 8)

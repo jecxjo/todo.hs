@@ -137,10 +137,10 @@ spec =
       let i2 = T.Incomplete Nothing (Just $ fromGregorian 2017 2 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
       let i3 = T.Incomplete (Just 'A') Nothing [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
       let i4 = T.Incomplete (Just 'A') (Just $ fromGregorian 2017 2 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
-      let c1 = T.Completed (fromGregorian 2017 3 1) i1
-      let c2 = T.Completed (fromGregorian 2017 3 1) i2
-      let c3 = T.Completed (fromGregorian 2017 3 1) i3
-      let c4 = T.Completed (fromGregorian 2017 3 1) i4
+      let c1 = T.Completed Nothing Nothing (Just $ fromGregorian 2017 3 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
+      let c2 = T.Completed Nothing (Just $ fromGregorian 2017 3 1) (Just $ fromGregorian 2017 2 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
+      let c3 = T.Completed (Just 'A') Nothing (Just $ fromGregorian 2017 3 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
+      let c4 = T.Completed (Just 'A') (Just $ fromGregorian 2017 3 1) (Just $ fromGregorian 2017 2 1) [T.SOther "Basic", T.SOther "task", T.SContext "Context", T.SOther "and", T.SProject "Project"]
 
       describe "Incomplete Task" $ do
         it "Basic, no date or priority" $ do
@@ -169,11 +169,11 @@ spec =
             `shouldBe` Right c2
 
         it "Priority and no date" $ do
-          parse P.completedTask "" "x 2017-03-01 (A) Basic task @Context and +Project"
+          parse P.completedTask "" "x (A) 2017-03-01 Basic task @Context and +Project"
             `shouldBe` Right c3
 
         it "Date and priority" $ do
-          parse P.completedTask "" "x 2017-03-01 (A) 2017-02-01 Basic task @Context and +Project"
+          parse P.completedTask "" "x (A) 2017-03-01 2017-02-01 Basic task @Context and +Project"
             `shouldBe` Right c4
 
       describe "Both Tasks" $ do
@@ -182,7 +182,7 @@ spec =
             `shouldBe` Right i4
 
         it "Matches Full Complete Task" $ do
-          parse P.task "" "x 2017-03-01 (A) 2017-02-01 Basic task @Context and +Project"
+          parse P.task "" "x (A) 2017-03-01 2017-02-01 Basic task @Context and +Project"
             `shouldBe` Right c4
 
       describe "Tasks" $ do

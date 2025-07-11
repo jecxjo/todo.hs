@@ -76,7 +76,13 @@ spec =
 
       context "Completed Task" $ do
         it "Show Completed task with everything" $ do
-          show (Completed (fromGregorian 2017 2 2) (Incomplete (Just 'C') (Just $ fromGregorian 2017 2 1) [SOther "Example", SOther "task", SProject "ProjectName", SContext "ContextName"])) `shouldBe` "x 2017-02-02 (C) 2017-02-01 Example task +ProjectName @ContextName"
+          show (Completed (Just 'C') (Just $ fromGregorian 2017 2 2) (Just $ fromGregorian 2017 2 1) [SOther "Example", SOther "task", SProject "ProjectName", SContext "ContextName"]) `shouldBe` "x (C) 2017-02-02 2017-02-01 Example task +ProjectName @ContextName"
+
+        it "Shows Completed task with no dates" $ do
+          show (Completed (Just 'D') Nothing Nothing [SOther "Example"]) `shouldBe` "x (D) Example"
+
+        it "Shows Completed task with no priority or dates" $ do
+          show (Completed Nothing Nothing Nothing [SOther "Example"]) `shouldBe` "x Example"
 
       context "Compare Tasks" $ do
         it "Two Incomplete with no priority are equal" $ do
@@ -95,13 +101,13 @@ spec =
           (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) == (Incomplete (Just 'B') Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` False
 
         it "Completed and Incomplete are not equal" $ do
-          (Completed (fromGregorian 2017 2 2) (Incomplete Nothing Nothing [SOther "Example", SOther "task"])) == (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` False
+          (Completed Nothing Nothing Nothing [SOther "Example", SOther "task"]) == (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` False
 
         it "Two Completed with no priority are equal" $ do
-          (Completed (fromGregorian 2017 2 2) (Incomplete Nothing Nothing [SOther "Example", SOther "task"])) == (Completed (fromGregorian 2017 2 2) (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"])) `shouldBe` True
+          (Completed Nothing  Nothing Nothing [SOther "Example", SOther "task"]) == (Completed Nothing Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` True
 
         it "Two Completed with priorities that match are equal" $ do
-          (Completed (fromGregorian 2017 2 2) (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"])) == (Completed (fromGregorian 2017 2 2) (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task", SOther "2"])) `shouldBe` True
+          (Completed (Just 'A') Nothing Nothing [SOther "Example", SOther "task"]) == (Completed (Just 'A') Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` True
 
         it "Two Incomplete priority is higher than no priority" $ do
           (Incomplete (Just 'A') Nothing [SOther "Example", SOther "task"]) `compare` (Incomplete Nothing Nothing [SOther "Example", SOther "task", SOther "2"]) `shouldBe` LT

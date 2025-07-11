@@ -35,7 +35,7 @@ module Todo.Commands.Helpers (
     filterTuplePriority
   ) where
 
-import           Control.Monad (forM_, mplus)
+import           Control.Monad (forM_, mplus, unless)
 import           Data.List (sort, sortBy)
 import           Data.Maybe (fromJust)
 import qualified Data.Text as T
@@ -109,10 +109,18 @@ appendFileMErr path txt =
   (\oldTxt -> return . T.intercalate "\n" $ T.lines oldTxt <> T.lines txt)
   >>= writeFileMErr path
 
+-- | Checks if file exists and creates an empty one if it doesn't
+ensureFileExists :: (AppError m, MonadFileSystem m) => Text -> m ()
+ensureFileExists path = do
+  exists <- fileExists path
+  unless exists $ do
+    writeFileMErr path ""
+
 -- | Read only pending tasks from todo.txt, sorted and numbered.
 getPendingTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getPendingTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let pending = sort $ filter isIncomplete tsks
@@ -122,6 +130,7 @@ getPendingTodo = do
 getCompletedTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getCompletedTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let completed = sort $ filter isCompleted tsks
@@ -131,6 +140,7 @@ getCompletedTodo = do
 getAllTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getAllTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let allTasks = sort tsks
@@ -142,6 +152,7 @@ getArchivedTodo = do
   archivePath <- archiveTxtPath <$> get
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
+  ensureFileExists (T.pack path)
   tsks <- readFileMErr (T.pack path) >>=
               either (throwError . EParseError) return . parseLines path . T.unpack
   let sorted = sort tsks
@@ -181,19 +192,18 @@ writeReport pending archived = do
 
 -- | Converts all string types of task
 convertTaskStrings :: (AppConfig m, AppError m, MonadDate m) => Task -> m Task
-convertTaskStrings (Incomplete pri now sx) = do
+convertTaskStrings (Incomplete pri start sx) = do
   sx' <- convertStringTypes sx
   st <- get
   let stamp = timeStamp st
-  let time = stamp `mplus` now
+  let time = stamp `mplus` start
   return $ Incomplete pri time sx'
-convertTaskStrings (Completed d (Incomplete pri now sx)) = do
+convertTaskStrings (Completed pri end start sx) = do
   sx' <- convertStringTypes sx
   st <- get
   let stamp = timeStamp st
-  let time = stamp `mplus` now
-  return $ Completed d (Incomplete pri time sx')
-convertTaskStrings _ = throwError $ EMiscError "Invalid task type for conversion"
+  let time = stamp `mplus` start
+  return $ Completed pri end time sx'
 
 -- | Read index or throw an error
 readIndex :: (AppError m) => Text -> m Int
@@ -253,14 +263,13 @@ filterTupleDueDate dueDate = filter containsDueDate
     isDue (SKeyValue (KVDueDate d)) = d <= dueDate
     isDue _ = False
     containsDueDate (_, Incomplete _ _ sx) = any isDue sx
-    containsDueDate (_, Completed _ (Incomplete _ _ sx)) = any isDue sx
-    containsDueDate (_, Completed _ (Completed _ _)) = False
+    containsDueDate (_, Completed _ _ _ sx) = any isDue sx
 
 filterTupleCompleteDate :: Day -> [(Int, Task)] -> [(Int, Task)]
 filterTupleCompleteDate completeDate = filter containsCompleteDate
   where
     containsCompleteDate (_, Incomplete{}) = False
-    containsCompleteDate (_, Completed d _) = d == completeDate
+    containsCompleteDate (_, Completed _ end _ _) = end == (Just completeDate)
 
 iso8601 :: UTCTime -> String
 iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
@@ -272,7 +281,7 @@ filterThreshold :: (MonadDate m) => [(Int, Task)] -> m [(Int, Task)]
 filterThreshold lst = do
   now <- getDay
   return $ filter (\(_, t) -> case t of
-                                Completed _ _ -> True
+                                Completed{} -> True
                                 Incomplete _ _ str -> maybe True (<= now) (extractThreshold str)) lst
 
 filterTuplePriority :: Priority -> [(Int, Task)] -> [(Int, Task)]

@@ -197,15 +197,41 @@ incompleteTask = do
 -- It is assumed that a completed task starts with x and a required completion
 -- date. It is also assumed that the rest of the string will be an incomplete
 -- task.
+completedTaskBad :: Parser Tasks.Task
+completedTaskBad = do
+  _ <- char 'x'
+  _ <- whiteSpace
+  endDate <- optionMaybe date
+  _ <- whiteSpace
+  pri <- optionMaybe priority
+  _ <- whiteSpace
+  startDate <- optionMaybe date
+  _ <- whiteSpace
+  rest <- lots
+  _ <- many endOfLine
+  case (endDate, startDate) of
+    (Just _, Nothing) -> fail "Completed tasks with end date must have a start date"
+    (_, _) -> return $ Tasks.Completed pri endDate startDate rest
+
+
+
 completedTask :: Parser Tasks.Task
 completedTask = do
   _ <- char 'x'
   _ <- whiteSpace
-  endDate <- date
+  pri <- optionMaybe priority
   _ <- whiteSpace
-  t <- incompleteTask
+  endDate <- optionMaybe date
+  _ <- whiteSpace
+  startDate <- optionMaybe date
+  _ <- whiteSpace
+  rest <- lots
   _ <- many endOfLine
-  return $ Tasks.Completed endDate t
+  case (endDate, startDate) of
+    (Just _, Nothing) -> return $ Tasks.Completed pri Nothing endDate rest
+    (_, _) -> return $ Tasks.Completed pri endDate startDate rest
+
+  
 
 -- |Either Incomplete or Completed Tasks
 -- When parsing the todo.txt file the order of entries is not defined. There
@@ -215,7 +241,7 @@ completedTask = do
 task :: Parser Tasks.Task
 task = do
   _ <- try (many (char '\n'))
-  choice [ completedTask, incompleteTask ]
+  choice [ completedTask, completedTaskBad, incompleteTask ]
 
 tasks :: Parser [Tasks.Task]
 tasks = option [] . try $ many task
