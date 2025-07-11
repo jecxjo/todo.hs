@@ -181,19 +181,18 @@ writeReport pending archived = do
 
 -- | Converts all string types of task
 convertTaskStrings :: (AppConfig m, AppError m, MonadDate m) => Task -> m Task
-convertTaskStrings (Incomplete pri now sx) = do
+convertTaskStrings (Incomplete pri start sx) = do
   sx' <- convertStringTypes sx
   st <- get
   let stamp = timeStamp st
-  let time = stamp `mplus` now
+  let time = stamp `mplus` start
   return $ Incomplete pri time sx'
-convertTaskStrings (Completed d (Incomplete pri now sx)) = do
+convertTaskStrings (Completed pri end start sx) = do
   sx' <- convertStringTypes sx
   st <- get
   let stamp = timeStamp st
-  let time = stamp `mplus` now
-  return $ Completed d (Incomplete pri time sx')
-convertTaskStrings _ = throwError $ EMiscError "Invalid task type for conversion"
+  let time = stamp `mplus` start
+  return $ Completed pri end time sx'
 
 -- | Read index or throw an error
 readIndex :: (AppError m) => Text -> m Int
@@ -253,14 +252,13 @@ filterTupleDueDate dueDate = filter containsDueDate
     isDue (SKeyValue (KVDueDate d)) = d <= dueDate
     isDue _ = False
     containsDueDate (_, Incomplete _ _ sx) = any isDue sx
-    containsDueDate (_, Completed _ (Incomplete _ _ sx)) = any isDue sx
-    containsDueDate (_, Completed _ (Completed _ _)) = False
+    containsDueDate (_, Completed _ _ _ sx) = any isDue sx
 
 filterTupleCompleteDate :: Day -> [(Int, Task)] -> [(Int, Task)]
 filterTupleCompleteDate completeDate = filter containsCompleteDate
   where
     containsCompleteDate (_, Incomplete{}) = False
-    containsCompleteDate (_, Completed d _) = d == completeDate
+    containsCompleteDate (_, Completed _ end _ _) = end == (Just completeDate)
 
 iso8601 :: UTCTime -> String
 iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
@@ -272,7 +270,7 @@ filterThreshold :: (MonadDate m) => [(Int, Task)] -> m [(Int, Task)]
 filterThreshold lst = do
   now <- getDay
   return $ filter (\(_, t) -> case t of
-                                Completed _ _ -> True
+                                Completed{} -> True
                                 Incomplete _ _ str -> maybe True (<= now) (extractThreshold str)) lst
 
 filterTuplePriority :: Priority -> [(Int, Task)] -> [(Int, Task)]

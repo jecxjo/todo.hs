@@ -122,11 +122,20 @@ extractAt (_:xs) = extractAt xs
 
 -- |Data type to store both incomplete and completed tasks.
 data Task = Incomplete (Maybe Priority) (Maybe Day) [StringTypes]
-          | Completed Day Task
+          | Completed (Maybe Priority) (Maybe Day) (Maybe Day) [StringTypes]
 
 -- |Show Task in format "(A) 2016-07-30 Task to do +Project @Context"
 instance Show Task where
-  show (Completed date task) = "x " ++ show date ++ " " ++ show task
+  show (Completed mPriority mEnd mStart sx) = "x "
+                                         ++ showPriority mPriority
+                                         ++ showDate mEnd
+                                         ++ showDate mStart
+                                         ++ unrollStringTypes sx
+    where showPriority (Just p) = "(" ++ [p] ++ ") "
+          showPriority Nothing = ""
+          showDate (Just d) = show d ++ " "
+          showDate Nothing = ""
+
   show (Incomplete mPriority mDate sx) = showPriority mPriority
                                                 ++ showDate mDate
                                                 ++ unrollStringTypes sx
@@ -136,36 +145,70 @@ instance Show Task where
           showDate Nothing = ""
 
 instance ShowColor Task where
-  showColor (Completed date task) = (color Red "x ") ++ show date ++ " " ++ showColor task
-  showColor (Incomplete mPriority mDate sx) = showPriority mPriority
-                                                ++ showDate mDate
+  showColor (Completed mPriority mEnd mStart sx) = (color Red "x ")
+                                                ++ showPriority mPriority
+                                                ++ showDateRed mEnd
+                                                ++ showDateGreen mStart
                                                 ++ unrollColorStringTypes sx
     where showPriority (Just p) = color Magenta $ "(" ++ [p] ++ ") "
           showPriority Nothing = ""
-          showDate (Just d) = show d ++ " "
-          showDate Nothing = ""
+          showDateRed (Just d) = color Red (show d ++ " ")
+          showDateRed Nothing = ""
+          showDateGreen (Just d) = color Green (show d ++ " ")
+          showDateGreen Nothing = ""
+
+  showColor (Incomplete mPriority mDate sx) = showPriority mPriority
+                                                ++ showDateGreen mDate
+                                                ++ unrollColorStringTypes sx
+    where showPriority (Just p) = color Magenta $ "(" ++ [p] ++ ") "
+          showPriority Nothing = ""
+          showDateGreen (Just d) = color Green (show d ++ " ")
+          showDateGreen Nothing = ""
 
 
 -- |Comparisons are done based on priority
 instance Eq Task where
-  (Incomplete Nothing _ _) == (Incomplete Nothing _ _) = True
-  (Incomplete (Just _) _ _) == (Incomplete Nothing _ _) = False
-  (Incomplete Nothing _ _) == (Incomplete (Just _) _ _) = False
-  (Incomplete (Just a) _ _) == (Incomplete (Just b) _ _) = a == b
-  Incomplete{} == (Completed _ _) = False
-  (Completed _ _) == Incomplete{} = False
-  (Completed _ t1) == (Completed _ t2) = t1 == t2
+  Incomplete{} == Completed{} = False
+  Completed{} == Incomplete{} = False
+  (Incomplete priA dateA _) == (Incomplete priB dateB _) =
+    priA == priB && dateA == dateB
+  (Completed priA endA startA _) == (Completed priB endB startB _) =
+    priA == priB && endA == endB && startA == startB
 
 -- |Comparisons are done based on priority.
 instance Ord Task where
+  -- Incomplete
   compare (Incomplete Nothing _ _) (Incomplete Nothing _ _) = EQ
   compare (Incomplete (Just _) _ _) (Incomplete Nothing _ _) = LT
   compare (Incomplete Nothing _ _) (Incomplete (Just _) _ _) = GT
-  compare Incomplete{} (Completed _ _) = LT
-  compare (Completed _ _) Incomplete{} = GT
+  compare Incomplete{} Completed{} = LT
+  compare Completed{} Incomplete{} = GT
   compare (Incomplete (Just a) _ _) (Incomplete (Just b) _ _) =
     compare a b
-  compare (Completed _ t1) (Completed _ t2) = compare t1 t2
+
+  -- Completed
+  compare (Completed p1 e1 s1 _) (Completed p2 e2 s2 _) =
+    comparePriority p1 p2 <> compareEndDate e1 e2 <> compareStartDate s1 s2
+
+
+-- Helper functions for Ord
+comparePriority :: Maybe Priority -> Maybe Priority -> Ordering
+comparePriority Nothing Nothing = EQ
+comparePriority Nothing _ = GT
+comparePriority _ Nothing = LT
+comparePriority (Just a) (Just b) = compare a b
+
+compareEndDate :: Maybe Day -> Maybe Day -> Ordering
+compareEndDate Nothing Nothing = EQ
+compareEndDate Nothing _ = GT
+compareEndDate _ Nothing = LT
+compareEndDate (Just a) (Just b) = compare a b
+
+compareStartDate :: Maybe Day -> Maybe Day -> Ordering
+compareStartDate Nothing Nothing = EQ
+compareStartDate Nothing _ = GT
+compareStartDate _ Nothing = LT
+compareStartDate (Just a) (Just b) = compare a b
 
 -- |Filters out all completed tasks and returns a list of incomplete
 isIncomplete :: Task -> Bool
@@ -174,7 +217,7 @@ isIncomplete _ = False
 
 -- |Filters out all incomplete tasks and returns a list of completed
 isCompleted :: Task -> Bool
-isCompleted (Completed _ _) = True
+isCompleted Completed{} = True
 isCompleted _ = False
 
 -- | Returns True if task contains the list of text
