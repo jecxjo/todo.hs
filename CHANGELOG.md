@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Release build using Github Actions
 
+### Fixed
+- Parsing completed with the wrong format is now actually fixed
+
 ## [0.5.0] - 2025-07-10
 ### Added
 - New `burndown` command that is terminal aware
