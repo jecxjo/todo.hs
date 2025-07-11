@@ -35,7 +35,7 @@ module Todo.Commands.Helpers (
     filterTuplePriority
   ) where
 
-import           Control.Monad (forM_, mplus)
+import           Control.Monad (forM_, mplus, unless)
 import           Data.List (sort, sortBy)
 import           Data.Maybe (fromJust)
 import qualified Data.Text as T
@@ -109,10 +109,18 @@ appendFileMErr path txt =
   (\oldTxt -> return . T.intercalate "\n" $ T.lines oldTxt <> T.lines txt)
   >>= writeFileMErr path
 
+-- | Checks if file exists and creates an empty one if it doesn't
+ensureFileExists :: (AppError m, MonadFileSystem m) => Text -> m ()
+ensureFileExists path = do
+  exists <- fileExists path
+  unless exists $ do
+    writeFileMErr path ""
+
 -- | Read only pending tasks from todo.txt, sorted and numbered.
 getPendingTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getPendingTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let pending = sort $ filter isIncomplete tsks
@@ -122,6 +130,7 @@ getPendingTodo = do
 getCompletedTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getCompletedTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let completed = sort $ filter isCompleted tsks
@@ -131,6 +140,7 @@ getCompletedTodo = do
 getAllTodo :: (AppError m, AppConfig m, MonadFileSystem m) => m [(Int, Task)]
 getAllTodo = do
   path <- T.pack . todoTxtPath <$> get
+  ensureFileExists path
   tsks <- readFileMErr path >>=
               either (throwError . EParseError) return . parseLines (T.unpack path) . T.unpack
   let allTasks = sort tsks
@@ -142,6 +152,7 @@ getArchivedTodo = do
   archivePath <- archiveTxtPath <$> get
   todoPath <- todoTxtPath <$> get
   let path = fromJust $ mplus archivePath (Just $ replaceFileName todoPath defaultArchiveName)
+  ensureFileExists (T.pack path)
   tsks <- readFileMErr (T.pack path) >>=
               either (throwError . EParseError) return . parseLines path . T.unpack
   let sorted = sort tsks

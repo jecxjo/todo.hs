@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Fixed `burndown` command to include the archive file
 - Fixed the format of completed tasks to match the todo.txt format
+- Fixed bug where no todo.txt throws an error instead of creating empty file
 
 ## [0.4.9] - 2025-07-08
 ### Fixed
